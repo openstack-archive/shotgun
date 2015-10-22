@@ -6,6 +6,7 @@ Name: %{name}
 Summary: Shotgun package
 Version: %{version}
 Release: %{release}
+Source0: %{name}-%{version}.tar.gz
 URL:     http://mirantis.com
 License: Apache
 Group: Development/Libraries
@@ -28,13 +29,13 @@ Shotgun package.
 %setup -cq -n %{name}-%{version}
 
 %build
-cd %{_builddir}/%{name}-%{version}/shotgun && python setup.py build
+cd %{_builddir}/%{name}-%{version} && python setup.py build
 
 %install
-cd %{_builddir}/%{name}-%{version}/shotgun && python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=%{_builddir}/%{name}-%{version}/shotgun/INSTALLED_FILES
+cd %{_builddir}/%{name}-%{version} && python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=%{_builddir}/%{name}-%{version}/INSTALLED_FILES
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files -f  %{_builddir}/%{name}-%{version}/shotgun/INSTALLED_FILES
+%files -f  %{_builddir}/%{name}-%{version}/INSTALLED_FILES
 %defattr(-,root,root)
