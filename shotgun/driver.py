@@ -125,11 +125,11 @@ class Driver(object):
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
             else:
-                logger.debug("Getting local file: cp -r %s %s",
+                logger.debug("Symlinking local file(s): cp -rs %s %s",
                              path, target_path)
                 utils.execute('mkdir -p "{0}"'.format(target_path))
-                return utils.execute('cp -r "{0}" "{1}"'.format(path,
-                                                                target_path))
+                return utils.execute('cp -rs "{0}" "{1}"'.format(path,
+                                                                 target_path))
         except Exception as e:
             logger.error("Error occured: %s", str(e))
 
