@@ -21,6 +21,7 @@ Requires:    gzip
 Requires:    bzip2
 Requires:    openssh-clients
 Requires:    xz
+BuildRequires: python-setuptools
 
 %description
 Shotgun package.
