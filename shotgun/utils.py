@@ -21,6 +21,8 @@ import socket
 from StringIO import StringIO
 import subprocess
 
+import netifaces
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ def fqdn(name=None):
 
 
 def is_local(name):
-    if name in ("localhost", hostname(), fqdn()):
+    if name in ["localhost", hostname(), fqdn()] + local_ip_addresses():
         return True
     return False
 
@@ -117,6 +119,18 @@ def execute(command, to_filename=None, env=None, shell=False):
             process[-2].stdout.close()
     stdout, stderr = process[-1].communicate()
     return (process[-1].returncode, stdout, stderr)
+
+
+def local_ip_addresses():
+    ip_list = []
+    for interface in netifaces.interfaces():
+        for link in netifaces.ifaddresses(interface).get(
+                netifaces.AF_INET, []):
+            ip_list.append(link['addr'])
+        for link in netifaces.ifaddresses(interface).get(
+                netifaces.AF_INET6, []):
+            ip_list.append(link['addr'])
+    return [ip for ip in ip_list if ip is not None]
 
 
 class CCStringIO(StringIO):
