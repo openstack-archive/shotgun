@@ -62,6 +62,21 @@ class TestUtils(base.BaseTestCase):
 
         self.assertEqual(rm_call[0][0], 'rm -r /path/target')
 
+    def test_is_local_true(self):
+        ips = utils.local_ip_addresses()
+        for ip in ips:
+            self.assertTrue(utils.is_local(ip))
+
+    def test_is_local_false(self):
+        ips = ['8.8.8.8']
+        for ip in ips:
+            self.assertFalse(utils.is_local(ip))
+
+    def test_local_ip_addresses(self):
+        ips = utils.local_ip_addresses()
+        self.assertTrue(
+            any([local in ips for local in ['localhost', '127.0.0.1']]))
+
 
 class TestCCStringIO(base.BaseTestCase):
 
