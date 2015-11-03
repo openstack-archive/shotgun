@@ -15,6 +15,8 @@
 import logging
 import os
 
+import fabric.exceptions
+
 from shotgun.driver import Driver
 from shotgun import utils
 
@@ -30,10 +32,37 @@ class Manager(object):
     def snapshot(self):
         logger.debug("Making snapshot")
         utils.execute("rm -rf {0}".format(os.path.dirname(self.conf.target)))
-        for obj_data in self.conf.objects:
-            logger.debug("Dumping: %s", obj_data)
-            driver = Driver.getDriver(obj_data, self.conf)
-            driver.snapshot()
+        postponed_objects = []
+        offline_hosts = []
+
+        def _snapshot_object(obj, offline_hosts):
+            host = self.conf.get_address_from_obj(obj)
+            if host in offline_hosts:
+                logger.debug("Host %s looks offline. Postponing "
+                             "object %s", host, obj)
+                return [obj]
+            logger.debug("Dumping: %s", obj)
+            driver = Driver.getDriver(obj, self.conf)
+            try:
+                driver.snapshot()
+            except fabric.exceptions.NetworkError:
+                logger.debug("Remote host %s is unreachable. "
+                             "Processing of its objects postponed.", host)
+                if host not in offline_hosts:
+                    offline_hosts.append(host)
+                return [obj]
+            return []
+
+        for obj in self.conf.objects:
+            postponed_objects.extend(_snapshot_object(obj, offline_hosts))
+        logger.debug("Trying to dump postponed objects")
+        offline_hosts = []
+        unproccessed_objects = []
+        for obj in postponed_objects:
+            unproccessed_objects.extend(_snapshot_object(obj, offline_hosts))
+        for obj in unproccessed_objects:
+            obj['type'] = 'offline'
+            _snapshot_object(obj, [])
         logger.debug("Archiving dump directory: %s", self.conf.target)
 
         utils.compress(self.conf.target, self.conf.compression_level)

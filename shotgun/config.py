@@ -55,6 +55,9 @@ class Config(object):
     def lastdump(self):
         return self.data.get("lastdump", settings.LASTDUMP)
 
+    def get_address_from_obj(self, obj):
+        return obj["host"].get('address', '127.0.0.1')
+
     @property
     def objects(self):
         for role, properties in self.data["dump"].iteritems():
