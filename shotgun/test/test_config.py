@@ -56,3 +56,74 @@ class TestConfig(base.BaseTestCase):
             'timeout': timeout,
         })
         self.assertEqual(conf.timeout, timeout)
+
+    def test_objects_per_host(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"},
+                         {"command": "uname -a",
+                          "to_file": "uname_a.txt",
+                          "type": "command"},
+                         {"command": "lsmod",
+                          "to_file": "lsmod.txt",
+                          "type": "command"},
+                         {"path": "/etc/*-release",
+                          "type": "file"}],
+                    "hosts": [{"ssh-key": "/root/.ssh/id_rsa",
+                               "address": "10.109.2.2"}]},
+                "controller": {
+                    "objects":
+                        [{"command": "pcs status",
+                          "to_file": "pcs_status.txt",
+                          "type": "command"}],
+                    "hosts":
+                        [{"ssh-key": "/root/.ssh/id_rsa",
+                          "hostname": "node-2",
+                          "address": "10.109.2.5"},
+                         {"ssh-key": "/root/.ssh/id_rsa",
+                          "hostname": "node-1",
+                          "address": "10.109.2.3"},
+                         {"ssh-key": "/root/.ssh/id_rsa",
+                          "hostname": "node-5",
+                          "address": "10.109.2.4"}]},
+            }
+        }
+        conf = Config(data)
+
+        self.assertEqual({
+            '10.109.2.5': [
+                {'type': 'command',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'hostname': 'node-5', 'address': '10.109.2.4'},
+                 'to_file': 'pcs_status.txt', 'command': 'pcs status'}],
+            '10.109.2.4': [
+                {'type': 'command',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'hostname': 'node-5', 'address': '10.109.2.4'},
+                 'to_file': 'pcs_status.txt', 'command': 'pcs status'}],
+            '10.109.2.3': [
+                {'type': 'command',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'hostname': 'node-5', 'address': '10.109.2.4'},
+                 'to_file': 'pcs_status.txt', 'command': 'pcs status'}],
+            '10.109.2.2': [
+                {'path': '/etc/nailgun',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'address': '10.109.2.2'},
+                 'type': 'dir'},
+                {'type': 'command',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'address': '10.109.2.2'},
+                 'to_file': 'uname_a.txt', 'command': 'uname -a'},
+                {'type': 'command',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'address': '10.109.2.2'},
+                 'to_file': 'lsmod.txt', 'command': 'lsmod'},
+                {'path': '/etc/*-release',
+                 'host': {'ssh-key': '/root/.ssh/id_rsa',
+                          'address': '10.109.2.2'},
+                 'type': 'file'}]},
+            conf.objects_per_host)

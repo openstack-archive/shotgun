@@ -14,6 +14,7 @@
 
 import tempfile
 
+import fabric.exceptions
 import mock
 
 from shotgun.manager import Manager
@@ -35,9 +36,33 @@ class TestManager(base.BaseTestCase):
         }
         conf = mock.MagicMock()
         conf.target = "/target/data"
-        conf.objects = [data]
+        conf.objects_per_host = {'remote_host': [data]}
         conf.lastdump = tempfile.mkstemp()[1]
         manager = Manager(conf)
         manager.snapshot()
         mget.assert_called_once_with(data, conf)
+        mexecute.assert_called_once_with('rm -rf /target')
+
+    @mock.patch('shotgun.manager.Driver.getDriver')
+    @mock.patch('shotgun.manager.utils.execute')
+    @mock.patch('shotgun.manager.utils.compress')
+    def test_snapshot_network_error(self, mcompress, mexecute, mget):
+        data = {
+            "type": "file",
+            "path": "/remote_dir/remote_file",
+            "host": {
+                "address": "remote_host",
+            },
+        }
+        drv = mock.MagicMock()
+        drv.snapshot.side_effect = fabric.exceptions.NetworkError
+        mget.return_value = drv
+        conf = mock.MagicMock()
+        conf.target = "/target/data"
+        conf.objects_per_host = {'remote_host': [data]}
+        conf.lastdump = tempfile.mkstemp()[1]
+        manager = Manager(conf)
+        manager.snapshot()
+        self.assertEquals(3 * [mock.call(data, conf)], mget.call_args_list)
+        self.assertEquals('offline', data['type'])
         mexecute.assert_called_once_with('rm -rf /target')
