@@ -15,6 +15,8 @@
 import logging
 import os
 
+import fabric.exceptions
+
 from shotgun.driver import Driver
 from shotgun import utils
 
@@ -31,9 +33,16 @@ class Manager(object):
         logger.debug("Making snapshot")
         utils.execute("rm -rf {0}".format(os.path.dirname(self.conf.target)))
         for obj_data in self.conf.objects:
+            host = self.conf.get_address_from_obj(obj_data)
             logger.debug("Dumping: %s", obj_data)
             driver = Driver.getDriver(obj_data, self.conf)
-            driver.snapshot()
+            try:
+                driver.snapshot()
+                self.conf.delete_object(obj_data)
+            except fabric.exceptions.NetworkError:
+                logger.debug("Remote host %s is unreachable. "
+                             "Processing of its objects postponed.", host)
+                self.conf.postpone_obj(obj_data)
         logger.debug("Archiving dump directory: %s", self.conf.target)
 
         utils.compress(self.conf.target, self.conf.compression_level)
