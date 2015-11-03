@@ -56,6 +56,17 @@ class Config(object):
         return self.data.get("lastdump", settings.LASTDUMP)
 
     @property
+    def objects_per_host(self):
+        hosts = {}
+        for role, properties in self.data["dump"].iteritems():
+            for host in properties.get("hosts", []):
+                hosts[host] = []
+                for object_ in properties.get("objects", []):
+                    object_["host"] = host
+                    hosts[host].append(object_)
+        return hosts
+
+    @property
     def objects(self):
         for role, properties in self.data["dump"].iteritems():
             for host in properties.get("hosts", []):

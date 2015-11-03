@@ -22,6 +22,7 @@ import sys
 import xmlrpclib
 
 import fabric.api
+import fabric.exceptions
 
 from shotgun import utils
 
@@ -53,6 +54,7 @@ class Driver(object):
             "postgres": Postgres,
             "xmlrpc": XmlRpc,
             "command": Command,
+            "offline": Offline,
         }.get(driver_type, cls)(data, conf)
 
     def __init__(self, data, conf):
@@ -98,8 +100,11 @@ class Driver(object):
                 logger.debug("Running local command: %s", command)
                 out.return_code, out.stdout, out.stderr = utils.execute(
                     command)
+        except fabric.exceptions.NetworkError as e:
+            logger.error("NetworkError occured: %s", str(e))
+            raise
         except Exception as e:
-            logger.error("Error occured: %s", str(e))
+            logger.error("Unexpected error occured: %s", str(e))
             out.stdout = raw_stdout.getvalue()
         return out
 
@@ -131,8 +136,11 @@ class Driver(object):
                 utils.execute('mkdir -p "{0}"'.format(target_path))
                 return utils.execute('cp -r "{0}" "{1}"'.format(path,
                                                                 target_path))
+        except fabric.exceptions.NetworkError as e:
+            logger.error("NetworkError occured: %s", str(e))
+            raise
         except Exception as e:
-            logger.error("Error occured: %s", str(e))
+            logger.error("Unexpected error occured: %s", str(e))
 
 
 class File(Driver):
@@ -256,3 +264,19 @@ class Command(Driver):
             f.write("\n===== STDERR =====:\n")
             if out.stderr:
                 f.write(out.stderr)
+
+
+class Offline(Driver):
+
+    def __init__(self, data, conf):
+        super(Offline, self).__init__(data, conf)
+        self.target_path = os.path.join(
+            self.conf.target, self.host, "OFFLINE_NODE.txt")
+
+    def snapshot(self):
+        if not os.path.exists(self.target_path):
+            utils.execute('mkdir -p "{0}"'.format(os.path.dirname(
+                self.target_path)))
+            with open(self.target_path, "w") as f:
+                f.write("Host {0} was offline/unreachable during logs "
+                        "obtaining.\n".format(self.host))
