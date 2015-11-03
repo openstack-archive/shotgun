@@ -223,3 +223,35 @@ class TestFile(base.BaseTestCase):
 
         mget.assert_called_with(data["path"], target_path)
         mremove.assert_called_with(dir_driver.full_dst_path, data['exclude'])
+
+
+class Offline(base.BaseTestCase):
+
+    @mock.patch('shotgun.driver.open', create=True,
+                new_callable=mock.mock_open)
+    @mock.patch('shotgun.driver.utils.execute', autospec=True)
+    @mock.patch('shotgun.driver.os', autospec=True)
+    def test_snapshot(self, mos, mexec, mopen):
+        data = {
+            "type": "offline",
+            "path": "/remote_dir/remote_file",
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2",
+            },
+        }
+        conf = mock.MagicMock()
+        conf.target = "/target"
+        target_path = "/target/remote_host/OFFLINE_NODE.txt"
+        mos.path.exists.return_value = False
+        mos.path.dirname.return_value = '/target/remote_host'
+        mos.path.join.return_value = target_path
+        offline_driver = shotgun.driver.Offline(data, conf)
+        offline_driver.snapshot()
+        file_handle_mock = mopen.return_value.__enter__.return_value
+        file_handle_mock.write.assert_called_once_with(
+            'Host remote_host with IP 10.109.0.2 was offline/unreachable '
+            'during logs obtaining.\n')
+        mopen.assert_called_once_with(target_path, 'w')
+        mexec.assert_called_once_with('mkdir -p "/target/remote_host"')
+        self.assertEqual(target_path, offline_driver.target_path)
