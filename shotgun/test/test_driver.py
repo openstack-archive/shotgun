@@ -60,9 +60,12 @@ class TestDriver(base.BaseTestCase):
         command = "COMMAND"
 
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host", 'address': '10.109.0.2'}},
-            conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            }
+        }, conf)
         result = driver.command(command)
 
         mfabrun.assert_called_with(
@@ -81,9 +84,12 @@ class TestDriver(base.BaseTestCase):
     def test_fabric_use_timout_from_driver(self, mfabset, _):
         timeout = random.randint(1, 100)
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host", "address": "10.109.0.2"}},
-            conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            }
+        }, conf)
         driver.timeout = timeout
         driver.command("COMMAND")
         mfabset.assert_called_with(
@@ -123,8 +129,12 @@ class TestDriver(base.BaseTestCase):
         command = "COMMAND"
 
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host"}}, conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            }
+        }, conf)
         result = driver.command(command)
 
         mstringio.assert_has_calls([
@@ -147,7 +157,7 @@ class TestDriver(base.BaseTestCase):
                 "hostname": "remote_host",
                 "address": "10.109.0.2",
                 "ssh-key": "path_to_key",
-            }
+            },
         }, conf)
         driver.get(remote_path, target_path)
         mexecute.assert_called_with('mkdir -p "{0}"'.format(target_path))
@@ -179,6 +189,41 @@ class TestDriver(base.BaseTestCase):
         cmd_driver = shotgun.driver.Driver(data, conf)
         self.assertEqual(cmd_driver.timeout, timeout)
         self.assertNotEqual(cmd_driver.timeout, conf.timeout)
+
+    def test_host_when_host_is_specified(self):
+        conf = mock.Mock(spec=shotgun.config.Config, target="some_target")
+        hostname = 'example.com'
+        driver = shotgun.driver.Driver({
+            'host': {
+                'hostname': hostname
+            }
+        }, conf)
+        self.assertEqual(driver.host, hostname)
+
+    def test_host_when_addr_is_specified(self):
+        conf = mock.Mock(spec=shotgun.config.Config, target="some_target")
+        address = '198.51.100.2'
+        driver = shotgun.driver.Driver({
+            'host': {
+                'address': address
+            }
+        }, conf)
+        self.assertEqual(driver.host, address)
+
+    @mock.patch('shotgun.driver.socket.gethostname')
+    def test_host_when_neither_addr_nor_hostname_is_specified(
+            self, mock_hostname):
+
+        conf = mock.Mock(spec=shotgun.config.Config, target="some_target")
+        sentinel = mock.sentinel
+        mock_hostname.return_value = sentinel
+
+        driver = shotgun.driver.Driver({
+            'host': {}
+        }, conf)
+
+        self.assertEqual(driver.host, sentinel)
+        self.assertEqual(mock_hostname.call_count, 1)
 
 
 class TestFile(base.BaseTestCase):
@@ -250,7 +295,7 @@ class TestOffline(base.BaseTestCase):
         offline_driver.snapshot()
         file_handle_mock = mopen.return_value.__enter__.return_value
         file_handle_mock.write.assert_called_once_with(
-            'Host remote_host with IP 10.109.0.2 was offline/unreachable '
+            'Host remote_host was offline/unreachable '
             'during logs obtaining.\n')
         mopen.assert_called_once_with(target_path, 'w')
         mexec.assert_called_once_with('mkdir -p "/target/remote_host"')
