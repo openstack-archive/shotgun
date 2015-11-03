@@ -60,9 +60,13 @@ class TestDriver(base.BaseTestCase):
         command = "COMMAND"
 
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host", 'address': '10.109.0.2'}},
-            conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            },
+            "remote": True
+        }, conf)
         result = driver.command(command)
 
         mfabrun.assert_called_with(
@@ -81,9 +85,13 @@ class TestDriver(base.BaseTestCase):
     def test_fabric_use_timout_from_driver(self, mfabset, _):
         timeout = random.randint(1, 100)
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host", "address": "10.109.0.2"}},
-            conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            },
+            "remote": True
+        }, conf)
         driver.timeout = timeout
         driver.command("COMMAND")
         mfabset.assert_called_with(
@@ -123,8 +131,12 @@ class TestDriver(base.BaseTestCase):
         command = "COMMAND"
 
         conf = mock.Mock()
-        driver = shotgun.driver.Driver(
-            {"host": {"hostname": "remote_host"}}, conf)
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host"
+            },
+            "remote": True
+        }, conf)
         result = driver.command(command)
 
         mstringio.assert_has_calls([
@@ -147,7 +159,8 @@ class TestDriver(base.BaseTestCase):
                 "hostname": "remote_host",
                 "address": "10.109.0.2",
                 "ssh-key": "path_to_key",
-            }
+            },
+            "remote": True
         }, conf)
         driver.get(remote_path, target_path)
         mexecute.assert_called_with('mkdir -p "{0}"'.format(target_path))

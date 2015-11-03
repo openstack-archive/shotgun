@@ -62,7 +62,11 @@ class Driver(object):
         self.host = self.data.get("host", {}).get("hostname", "localhost")
         self.addr = self.data.get("host", {}).get("address", "127.0.0.1")
         self.ssh_key = self.data.get("host", {}).get("ssh-key")
-        self.local = utils.is_local(self.host)
+
+        # Indicates whether a command should be executed on remote
+        # machine. By default it will be executed on local host
+        self.remote = self.data.get("remote", False)
+
         self.conf = conf
         self.timeout = self.data.get("timeout", self.conf.timeout)
 
@@ -74,7 +78,7 @@ class Driver(object):
 
         raw_stdout = utils.CCStringIO(writers=sys.stdout)
         try:
-            if not self.local:
+            if self.remote:
                 with fabric.api.settings(
                     host_string=self.addr,      # destination host
                     key_filename=self.ssh_key,  # a path to ssh key
@@ -110,7 +114,7 @@ class Driver(object):
         copied files or directories
         """
         try:
-            if not self.local:
+            if self.remote:
                 with fabric.api.settings(
                     host_string=self.addr,      # destination host
                     key_filename=self.ssh_key,  # a path to ssh key
