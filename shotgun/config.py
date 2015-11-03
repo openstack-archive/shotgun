@@ -25,6 +25,14 @@ class Config(object):
     def __init__(self, data=None):
         self.data = data
         self.time = time.localtime()
+        self.offline_hosts = []
+        self.objs = []
+        for role, properties in self.data.get("dump", {}).iteritems():
+            for host in properties.get("hosts", []):
+                for object_ in properties.get("objects", []):
+                    object_["host"] = host
+                    object_["attempts"] = 2
+                    self.objs.append(object_)
 
     def _timestamp(self, name):
         return "{0}-{1}".format(
@@ -55,13 +63,29 @@ class Config(object):
     def lastdump(self):
         return self.data.get("lastdump", settings.LASTDUMP)
 
+    def get_address_from_obj(self, obj):
+        # XXX: address or hostname?
+        return obj["host"].get('address', '127.0.0.1')
+
+    def postpone_obj(self, obj):
+        host = self.get_address_from_obj(obj)
+        logger.debug("Remote host %s is unreachable. "
+                     "Processing of its objects postponed.", host)
+        self.offline_hosts.append(host)
+        self.objs.append(obj)
+        obj["attempts"] -= 1
+
     @property
     def objects(self):
-        for role, properties in self.data["dump"].iteritems():
-            for host in properties.get("hosts", []):
-                for object_ in properties.get("objects", []):
-                    object_["host"] = host
-                    yield object_
+        while self.objs:
+            for obj in self.objs:
+                host = self.get_address_from_obj(obj)
+                if not obj["attempts"]:
+                    obj['type'] = 'offline'
+                if host not in self.offline_hosts:
+                    self.objs.remove(obj)
+                    yield obj
+            self.offline_hosts = []
 
     @property
     def timeout(self):

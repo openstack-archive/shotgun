@@ -14,8 +14,10 @@
 
 import tempfile
 
+import fabric.exceptions
 import mock
 
+from shotgun.config import Config
 from shotgun.manager import Manager
 from shotgun.test import base
 
@@ -41,3 +43,49 @@ class TestManager(base.BaseTestCase):
         manager.snapshot()
         mget.assert_called_once_with(data, conf)
         mexecute.assert_called_once_with('rm -rf /target')
+
+    @mock.patch('shotgun.manager.Driver.getDriver')
+    @mock.patch('shotgun.manager.utils.execute')
+    @mock.patch('shotgun.manager.utils.compress')
+    def test_snapshot_network_error(self, mcompress, mexecute, mget):
+        data = {
+            "dump": {
+                "role": {
+                    "objects": [
+                        {
+                            "type": "file",
+                            "path": "/remote_dir/remote_file",
+                        },
+                        {
+                            "type": "dir",
+                            "path": "/remote_dir/remote_dir",
+                        },
+                    ],
+                    "hosts": [
+                        {
+                            "address": "remote_host",
+                        },
+                    ],
+                },
+            },
+        }
+        drv = mock.MagicMock()
+        drv.snapshot.side_effect = 2 * [fabric.exceptions.NetworkError, None]
+        mget.return_value = drv
+        conf = Config(data)
+        obj1 = {
+            'path': '/remote_dir/remote_file',
+            'host': {'address': 'remote_host'},
+            'type': 'offline', 'attempts': 0,
+        }
+        obj2 = {
+            'path': '/remote_dir/remote_dir',
+            'host': {'address': 'remote_host'},
+            'type': 'dir', 'attempts': 2,
+        }
+        manager = Manager(conf)
+        manager.snapshot()
+        self.assertEquals([mock.call(obj1, conf), mock.call(obj2, conf),
+                           mock.call(obj1, conf), mock.call(obj1, conf)],
+                          mget.call_args_list)
+        mexecute.assert_called_once_with('rm -rf /tmp')

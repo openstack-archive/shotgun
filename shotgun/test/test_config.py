@@ -56,3 +56,19 @@ class TestConfig(base.BaseTestCase):
             'timeout': timeout,
         })
         self.assertEqual(conf.timeout, timeout)
+
+    def test_get_address_from_obj(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"},
+                         ],
+                    "hosts": [{"ssh-key": "/root/.ssh/id_rsa",
+                               "address": "10.109.2.2"}]},
+            }
+        }
+        conf = Config(data)
+        obj = conf.objects.next()
+        self.assertEqual('10.109.2.2', conf.get_address_from_obj(obj))
