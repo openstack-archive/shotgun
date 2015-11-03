@@ -15,6 +15,8 @@
 import logging
 import os
 
+import fabric.exceptions
+
 from shotgun.driver import Driver
 from shotgun import utils
 
@@ -33,7 +35,10 @@ class Manager(object):
         for obj_data in self.conf.objects:
             logger.debug("Dumping: %s", obj_data)
             driver = Driver.getDriver(obj_data, self.conf)
-            driver.snapshot()
+            try:
+                driver.snapshot()
+            except fabric.exceptions.NetworkError:
+                self.conf.postpone_obj(obj_data)
         logger.debug("Archiving dump directory: %s", self.conf.target)
 
         utils.compress(self.conf.target, self.conf.compression_level)
