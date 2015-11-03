@@ -56,3 +56,75 @@ class TestConfig(base.BaseTestCase):
             'timeout': timeout,
         })
         self.assertEqual(conf.timeout, timeout)
+
+    def test_on_network_error(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"},
+                         ],
+                    "hosts": [{"ssh-key": "/root/.ssh/id_rsa",
+                               "address": "10.109.2.2"}]},
+            }
+        }
+        conf = Config(data)
+        obj = conf.objects.next()
+        host = conf.get_network_address(obj)
+        self.assertNotIn(obj, conf.try_again)
+        self.assertNotIn(host, conf.offline_hosts)
+        conf.on_network_error(obj)
+        self.assertIn(obj, conf.try_again)
+        self.assertIn(host, conf.offline_hosts)
+
+    def test_get_network_address(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"},
+                         ],
+                    "hosts": [{"ssh-key": "/root/.ssh/id_rsa",
+                               "address": "10.109.2.2"}]},
+            }
+        }
+        conf = Config(data)
+        obj = conf.objects.next()
+        self.assertEqual('10.109.2.2', conf.get_network_address(obj))
+
+    def test_get_network_address_default(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"},
+                         ],
+                    "hosts": [{"ssh-key": "/root/.ssh/id_rsa",
+                               "hostname": "fuel.tld"}]},
+            }
+        }
+        conf = Config(data)
+        obj = conf.objects.next()
+        self.assertEqual('127.0.0.1', conf.get_network_address(obj))
+
+    def test_init(self):
+        data = {
+            "dump": {
+                "fake_role1": {
+                    "objects":
+                        [{"fake_obj_1": '1'}, {"fake_obj_2": '2'}],
+                    "hosts": ["fake_host1", "fake_host2", "fake_host3"]},
+            }
+        }
+        conf = Config(data)
+        expected_objs = [
+            {'host': 'fake_host1', 'fake_obj_1': '1'},
+            {'host': 'fake_host1', 'fake_obj_2': '2'},
+            {'host': 'fake_host2', 'fake_obj_1': '1'},
+            {'host': 'fake_host2', 'fake_obj_2': '2'},
+            {'host': 'fake_host3', 'fake_obj_1': '1'},
+            {'host': 'fake_host3', 'fake_obj_2': '2'}]
+        self.assertItemsEqual(expected_objs, conf.objs)
