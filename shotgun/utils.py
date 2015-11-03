@@ -39,12 +39,6 @@ def fqdn(name=None):
     return socket.getfqdn(socket.gethostname())
 
 
-def is_local(name):
-    if name in ("localhost", hostname(), fqdn()):
-        return True
-    return False
-
-
 def iterfiles(path):
     for root, dirnames, filenames in os.walk(path, topdown=True):
         for filename in filenames:

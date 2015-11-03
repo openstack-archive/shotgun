@@ -62,7 +62,6 @@ class Driver(object):
         self.host = self.data.get("host", {}).get("hostname", "localhost")
         self.addr = self.data.get("host", {}).get("address", "127.0.0.1")
         self.ssh_key = self.data.get("host", {}).get("ssh-key")
-        self.local = utils.is_local(self.host)
         self.conf = conf
         self.timeout = self.data.get("timeout", self.conf.timeout)
 
@@ -74,63 +73,51 @@ class Driver(object):
 
         raw_stdout = utils.CCStringIO(writers=sys.stdout)
         try:
-            if not self.local:
-                with fabric.api.settings(
-                    host_string=self.addr,      # destination host
-                    key_filename=self.ssh_key,  # a path to ssh key
-                    timeout=2,                  # a network connection timeout
-                    command_timeout=self.timeout,  # command execution timeout
-                    warn_only=True,             # don't exit on error
-                    abort_on_prompts=True,      # non-interactive mode
-                ):
-                    logger.debug("Running remote command: "
-                                 "host: %s command: %s", self.host, command)
-                    try:
-                        output = fabric.api.run(command, stdout=raw_stdout)
-                    except SystemExit:
-                        logger.error("Fabric aborted this iteration")
-                    # NOTE(prmtl): because of pty=True (default) and
-                    # combine_stderr=True (default) stderr is combined
-                    # with stdout
-                    out.stdout = raw_stdout.getvalue()
-                    out.return_code = output.return_code
-            else:
-                logger.debug("Running local command: %s", command)
-                out.return_code, out.stdout, out.stderr = utils.execute(
-                    command)
+            with fabric.api.settings(
+                host_string=self.addr,      # destination host
+                key_filename=self.ssh_key,  # a path to ssh key
+                timeout=2,                  # a network connection timeout
+                command_timeout=self.timeout,  # command execution timeout
+                warn_only=True,             # don't exit on error
+                abort_on_prompts=True,      # non-interactive mode
+            ):
+                logger.debug("Running remote command: "
+                             "host: %s command: %s", self.host, command)
+                try:
+                    output = fabric.api.run(command, stdout=raw_stdout)
+                except SystemExit:
+                    logger.error("Fabric aborted this iteration")
+                # NOTE(prmtl): because of pty=True (default) and
+                # combine_stderr=True (default) stderr is combined
+                # with stdout
+                out.stdout = raw_stdout.getvalue()
+                out.return_code = output.return_code
         except Exception as e:
             logger.error("Error occured: %s", str(e))
             out.stdout = raw_stdout.getvalue()
         return out
 
     def get(self, path, target_path):
-        """Get remote or local file
+        """Get remote file
 
         target_path must be the directory where to put
         copied files or directories
         """
         try:
-            if not self.local:
-                with fabric.api.settings(
-                    host_string=self.addr,      # destination host
-                    key_filename=self.ssh_key,  # a path to ssh key
-                    timeout=2,                  # a network connection timeout
-                    warn_only=True,             # don't exit on error
-                    abort_on_prompts=True,      # non-interactive mode
-                ):
-                    logger.debug("Getting remote file: %s %s",
-                                 path, target_path)
-                    utils.execute('mkdir -p "{0}"'.format(target_path))
-                    try:
-                        return fabric.api.get(path, target_path)
-                    except SystemExit:
-                        logger.error("Fabric aborted this iteration")
-            else:
-                logger.debug("Getting local file: cp -r %s %s",
+            with fabric.api.settings(
+                host_string=self.addr,      # destination host
+                key_filename=self.ssh_key,  # a path to ssh key
+                timeout=2,                  # a network connection timeout
+                warn_only=True,             # don't exit on error
+                abort_on_prompts=True,      # non-interactive mode
+            ):
+                logger.debug("Getting remote file: %s %s",
                              path, target_path)
                 utils.execute('mkdir -p "{0}"'.format(target_path))
-                return utils.execute('cp -r "{0}" "{1}"'.format(path,
-                                                                target_path))
+                try:
+                    return fabric.api.get(path, target_path)
+                except SystemExit:
+                    logger.error("Fabric aborted this iteration")
         except Exception as e:
             logger.error("Error occured: %s", str(e))
 

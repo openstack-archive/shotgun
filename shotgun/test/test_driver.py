@@ -94,22 +94,6 @@ class TestDriver(base.BaseTestCase):
             key_filename=mock.ANY,
             abort_on_prompts=mock.ANY)
 
-    @mock.patch('shotgun.driver.utils.execute')
-    def test_driver_local_command(self, mexecute):
-        mexecute.return_value = ("RETURN_CODE", "STDOUT", "STDERR")
-
-        out = shotgun.driver.CommandOut()
-        out.stdout = "STDOUT"
-        out.stderr = "STDERR"
-        out.return_code = "RETURN_CODE"
-
-        command = "COMMAND"
-        conf = mock.Mock()
-        driver = shotgun.driver.Driver({}, conf)
-        result = driver.command(command)
-        shotgun.driver.utils.execute.assert_called_with(command)
-        self.assertEqual(result, out)
-
     @mock.patch('shotgun.driver.utils.CCStringIO')
     @mock.patch('shotgun.driver.fabric.api.settings')
     @mock.patch('shotgun.driver.fabric.api.run')
@@ -156,13 +140,6 @@ class TestDriver(base.BaseTestCase):
         mfabset.assert_called_with(
             host_string="10.109.0.2", key_filename="path_to_key",
             timeout=2, warn_only=True, abort_on_prompts=True)
-
-        mexecute.reset_mock()
-        driver = shotgun.driver.Driver({}, conf)
-        driver.get(remote_path, target_path)
-        self.assertEqual(mexecute.mock_calls, [
-            mock.call('mkdir -p "{0}"'.format(target_path)),
-            mock.call('cp -r "{0}" "{1}"'.format(remote_path, target_path))])
 
     def test_use_timeout_from_global_conf(self):
         data = {}
