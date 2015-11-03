@@ -14,8 +14,10 @@
 
 import tempfile
 
+import fabric.exceptions
 import mock
 
+from shotgun.config import Config
 from shotgun.manager import Manager
 from shotgun.test import base
 
@@ -41,3 +43,76 @@ class TestManager(base.BaseTestCase):
         manager.snapshot()
         mget.assert_called_once_with(data, conf)
         mexecute.assert_called_once_with('rm -rf /target')
+
+    @mock.patch('shotgun.manager.Driver.getDriver')
+    @mock.patch('shotgun.manager.utils.execute')
+    @mock.patch('shotgun.manager.utils.compress')
+    def test_snapshot_network_error(self, mcompress, mexecute, mget):
+        data = {
+            "dump": {
+                "role1": {
+                    "objects": [
+                        {
+                            "type": "file",
+                            "path": "/remote_file1",
+                        },
+                        {
+                            "type": "dir",
+                            "path": "/remote_dir1",
+                        },
+                    ],
+                    "hosts": [
+                        {
+                            "address": "remote_host1",
+                        },
+                    ],
+                },
+                "role2": {
+                    "objects": [
+                        {
+                            "type": "file",
+                            "path": "/remote_file1",
+                        },
+                    ],
+                    "hosts": [
+                        {
+                            "address": "remote_host2",
+                        },
+                    ],
+                },
+            },
+        }
+        drv = mock.MagicMock()
+        drv.snapshot.side_effect = [
+            fabric.exceptions.NetworkError,
+            None,
+            fabric.exceptions.NetworkError,
+            None,
+            None,
+        ]
+        mget.return_value = drv
+        conf = Config(data)
+        failed_obj_file1 = {
+            'path': '/remote_file1',
+            'host': {'address': 'remote_host1'},
+            'type': 'offline', 'attempts': 0,
+        }
+        processed_obj = {
+            'path': '/remote_file1',
+            'host': {'address': 'remote_host2'},
+            'type': 'file', 'attempts': 2,
+        }
+        offline_obj_dir1 = {
+            'path': '/remote_dir1',
+            'host': {'address': 'remote_host1'},
+            'type': 'offline', 'attempts': 0,
+        }
+        manager = Manager(conf)
+        manager.snapshot()
+        self.assertEquals([mock.call(failed_obj_file1, conf),
+                           mock.call(processed_obj, conf),
+                           mock.call(failed_obj_file1, conf),
+                           mock.call(failed_obj_file1, conf),
+                           mock.call(offline_obj_dir1, conf)],
+                          mget.call_args_list)
+        mexecute.assert_called_once_with('rm -rf /tmp')

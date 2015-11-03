@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import deque
 import logging
 import time
 
@@ -25,6 +26,18 @@ class Config(object):
     def __init__(self, data=None):
         self.data = data
         self.time = time.localtime()
+        self.offline_hosts = set()
+        self.objs = deque()
+        for properties in self.data.get("dump", {}).itervalues():
+            for host in properties.get("hosts", []):
+                for object_ in properties.get("objects", []):
+                    object_["host"] = host
+                    object_["attempts"] = settings.ATTEMPTS
+                    self.objs.append(object_)
+        # sentinel used to indicate the end of iteration over the
+        # objects
+        self.sentinel = 'END'
+        self.objs.append(self.sentinel)
 
     def _timestamp(self, name):
         return "{0}-{1}".format(
@@ -55,13 +68,48 @@ class Config(object):
     def lastdump(self):
         return self.data.get("lastdump", settings.LASTDUMP)
 
+    @staticmethod
+    def get_network_address(obj):
+        """Returns network address of object."""
+        # XXX: address or hostname?
+        return obj["host"].get('address', '127.0.0.1')
+
+    def on_network_error(self, obj):
+        """Lets the object to have another attempt for being proccessed."""
+        host = self.get_network_address(obj)
+        logger.debug("Remote host %s is unreachable. "
+                     "Processing of its objects postponed.", host)
+        # Convert to 'offline' object once all attempts exhausted
+        obj["attempts"] -= 1
+        if not obj["attempts"]:
+            obj['type'] = 'offline'
+        self.objs.append(obj)
+        self.offline_hosts.add(host)
+
     @property
     def objects(self):
-        for role, properties in self.data["dump"].iteritems():
-            for host in properties.get("hosts", []):
-                for object_ in properties.get("objects", []):
-                    object_["host"] = host
-                    yield object_
+        """Stateful generator for processing objects.
+
+        It should be used in conjunction with on_network_error() to give
+        another try for objects which threw NetworkError.
+        """
+        while self.objs:
+            obj = self.objs.popleft()
+            if obj is self.sentinel:
+                if not self.objs:
+                    return
+                # Emptying offline hosts in order to perform more attempts to
+                # yield objects. That will allow to postpone processing of
+                # objects to the next iteration rather than having to spend
+                # multiple retries in a serie for a particular object.
+                self.offline_hosts.clear()
+                self.objs.append(self.sentinel)
+            else:
+                if self.get_network_address(obj) not in self.offline_hosts or \
+                        obj['type'] == 'offline':
+                    yield obj
+                else:
+                    self.on_network_error(obj)
 
     @property
     def timeout(self):
