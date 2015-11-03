@@ -17,6 +17,7 @@ import os
 import pprint
 import pwd
 import re
+import socket
 import stat
 import sys
 import xmlrpclib
@@ -60,13 +61,26 @@ class Driver(object):
     def __init__(self, data, conf):
         logger.debug("Initializing driver %s: host=%s",
                      self.__class__.__name__, data.get("host"))
-        self.data = data
-        self.host = self.data.get("host", {}).get("hostname", "localhost")
-        self.addr = self.data.get("host", {}).get("address", "127.0.0.1")
-        self.ssh_key = self.data.get("host", {}).get("ssh-key")
-        self.local = utils.is_local(self.host)
+
+        data_host = data.get("host", {})
+        hostname = data_host.get("hostname")
+        address = data_host.get("address")
+        self.ssh_key = data_host.get("ssh-key")
+
+        # `dest_host` is a IP address or a hostname which is used for network
+        # connection. IP address is preferable for network connection.
+        self.dest_host = address or hostname  # destination host
+
+        # `host` is a hostname or an IP address or hostname of the local host
+        # which is used for reporting (e.g. logging reporting); a hostname is
+        # more preferred than an address for reporting. If neither hostname nor
+        # address is used than it is considered that a command (or a file
+        # operation) will be executed on a local host, so we use local hostname
+        # for reporting.
+        self.host = hostname or address or socket.gethostname()
+
         self.conf = conf
-        self.timeout = self.data.get("timeout", self.conf.timeout)
+        self.timeout = data.get("timeout", self.conf.timeout)
 
     def snapshot(self):
         raise NotImplementedError
@@ -76,17 +90,18 @@ class Driver(object):
 
         raw_stdout = utils.CCStringIO(writers=sys.stdout)
         try:
-            if not self.local:
+            if self.dest_host:
                 with fabric.api.settings(
-                    host_string=self.addr,      # destination host
-                    key_filename=self.ssh_key,  # a path to ssh key
-                    timeout=2,                  # a network connection timeout
+                    host_string=self.dest_host,   # destination host
+                    key_filename=self.ssh_key,     # a path to ssh key
+                    timeout=2,                     # connection timeout
                     command_timeout=self.timeout,  # command execution timeout
-                    warn_only=True,             # don't exit on error
-                    abort_on_prompts=True,      # non-interactive mode
+                    warn_only=True,                # don't exit on error
+                    abort_on_prompts=True,         # non-interactive mode
                 ):
-                    logger.debug("Running remote command: "
-                                 "host: %s command: %s", self.host, command)
+                    logger.debug(
+                        "Running remote command: host: %s command: %s",
+                        self.host, command)
                     try:
                         output = fabric.api.run(command, stdout=raw_stdout)
                     except SystemExit:
@@ -115,13 +130,13 @@ class Driver(object):
         copied files or directories
         """
         try:
-            if not self.local:
+            if self.dest_host:
                 with fabric.api.settings(
-                    host_string=self.addr,      # destination host
-                    key_filename=self.ssh_key,  # a path to ssh key
-                    timeout=2,                  # a network connection timeout
-                    warn_only=True,             # don't exit on error
-                    abort_on_prompts=True,      # non-interactive mode
+                    host_string=self.dest_host,  # destination host
+                    key_filename=self.ssh_key,    # a path to ssh key
+                    timeout=2,                    # connection timeout
+                    warn_only=True,               # don't exit on error
+                    abort_on_prompts=True,        # non-interactive mode
                 ):
                     logger.debug("Getting remote file: %s %s",
                                  path, target_path)
@@ -131,11 +146,11 @@ class Driver(object):
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
             else:
-                logger.debug("Getting local file: cp -r %s %s",
-                             path, target_path)
+                logger.debug(
+                    "Getting local file: cp -r %s %s", path, target_path)
                 utils.execute('mkdir -p "{0}"'.format(target_path))
-                return utils.execute('cp -r "{0}" "{1}"'.format(path,
-                                                                target_path))
+                return utils.execute(
+                    'cp -r "{0}" "{1}"'.format(path, target_path))
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
             raise
@@ -144,10 +159,11 @@ class Driver(object):
 
 
 class File(Driver):
+
     def __init__(self, data, conf):
         super(File, self).__init__(data, conf)
-        self.path = self.data["path"]
-        self.exclude = self.data.get('exclude', [])
+        self.path = data["path"]
+        self.exclude = data.get('exclude', [])
         logger.debug("File to get: %s", self.path)
         self.target_path = str(os.path.join(
             self.conf.target, self.host,
@@ -177,10 +193,10 @@ Dir = File
 class Postgres(Driver):
     def __init__(self, data, conf):
         super(Postgres, self).__init__(data, conf)
-        self.dbhost = self.data.get("dbhost", "localhost")
-        self.dbname = self.data["dbname"]
-        self.username = self.data.get("username", "postgres")
-        self.password = self.data.get("password")
+        self.dbhost = data.get("dbhost", "localhost")
+        self.dbname = data["dbname"]
+        self.username = data.get("username", "postgres")
+        self.password = data.get("password")
         self.target_path = str(os.path.join(self.conf.target,
                                self.host, "pg_dump"))
 
@@ -219,9 +235,9 @@ class XmlRpc(Driver):
     def __init__(self, data, conf):
         super(XmlRpc, self).__init__(data, conf)
 
-        self.server = self.data.get("server", "localhost")
-        self.methods = self.data.get("methods", [])
-        self.to_file = self.data.get("to_file")
+        self.server = data.get("server", "localhost")
+        self.methods = data.get("methods", [])
+        self.to_file = data.get("to_file")
 
         self.target_path = os.path.join(
             self.conf.target, self.host, "xmlrpc", self.to_file)
@@ -246,8 +262,8 @@ class Command(Driver):
 
     def __init__(self, data, conf):
         super(Command, self).__init__(data, conf)
-        self.cmdname = self.data["command"]
-        self.to_file = self.data["to_file"]
+        self.cmdname = data["command"]
+        self.to_file = data["to_file"]
         self.target_path = os.path.join(
             self.conf.target, self.host, "commands", self.to_file)
 
@@ -278,5 +294,5 @@ class Offline(Driver):
             utils.execute('mkdir -p "{0}"'.format(os.path.dirname(
                 self.target_path)))
             with open(self.target_path, "w") as f:
-                f.write("Host {0} with IP {1} was offline/unreachable during "
-                        "logs obtaining.\n".format(self.host, self.addr))
+                f.write("Host {0} was offline/unreachable during "
+                        "logs obtaining.\n".format(self.host))
