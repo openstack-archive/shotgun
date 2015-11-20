@@ -108,3 +108,11 @@ class Config(object):
     def timeout(self):
         """Timeout for executing commands."""
         return self.data.get("timeout", settings.DEFAULT_TIMEOUT)
+
+    @property
+    def get_self_log_object(self):
+
+        return {
+            "type": "file",
+            "path": settings.LOG_FILE
+        }
