@@ -40,9 +40,11 @@ class TestManager(base.BaseTestCase):
         conf.target = "/target/data"
         conf.objects = [data]
         conf.lastdump = tempfile.mkstemp()[1]
+        conf.self_log_object = {"type": "file", "path": "/path"}
         manager = Manager(conf)
         manager.snapshot()
-        mget.assert_called_once_with(data, conf)
+        calls = [mock.call(data, conf), mock.call(conf.self_log_object, conf)]
+        mget.assert_has_calls(calls, any_order=True)
         mexecute.assert_called_once_with('rm -rf /target')
 
     @mock.patch('shotgun.manager.Driver.getDriver')
@@ -69,6 +71,7 @@ class TestManager(base.BaseTestCase):
             None,
             fabric.exceptions.NetworkError,
             None,
+            None,
         ]
         mget.return_value = drv
         conf = Config()
@@ -85,9 +88,8 @@ class TestManager(base.BaseTestCase):
         }
         manager = Manager(conf)
         manager.snapshot()
-        self.assertEquals([mock.call(offline_obj, conf),
-                           mock.call(processed_obj, conf),
-                           mock.call(offline_obj, conf),
-                           mock.call(offline_obj, conf)],
-                          mget.call_args_list)
+        mget.assert_has_calls([mock.call(offline_obj, conf),
+                               mock.call(processed_obj, conf),
+                               mock.call(offline_obj, conf),
+                               mock.call(offline_obj, conf)], any_order=True)
         mexecute.assert_called_once_with('rm -rf /tmp')
