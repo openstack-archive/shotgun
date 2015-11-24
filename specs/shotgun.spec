@@ -16,6 +16,7 @@ BuildArch: noarch
 Requires:    postgresql
 Requires:    python-fabric >= 1.10.0
 Requires:    python-argparse
+Requires:    python-six >= 1.9.0
 Requires:    tar
 Requires:    gzip
 Requires:    bzip2
