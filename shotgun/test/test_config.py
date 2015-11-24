@@ -94,7 +94,7 @@ class TestConfig(base.BaseTestCase):
         obj = conf.objects.next()
         self.assertEqual('10.109.2.2', conf.get_network_address(obj))
 
-    def test_get_network_address_default(self):
+    def test_get_network_address_hostname(self):
         data = {
             "dump": {
                 "master": {
@@ -108,7 +108,34 @@ class TestConfig(base.BaseTestCase):
         }
         conf = Config(data)
         obj = conf.objects.next()
-        self.assertEqual('127.0.0.1', conf.get_network_address(obj))
+        self.assertEqual('fuel.tld', conf.get_network_address(obj))
+
+    def test_get_network_address_absent_address_and_hostname(self):
+        data = {
+            "dump": {
+                "master": {
+                    "objects":
+                        [{"path": "/etc/nailgun",
+                          "type": "dir"}]},
+            }
+        }
+        conf = Config(data)
+        obj = conf.objects.next()
+        self.assertFalse(conf.get_network_address(obj))
+
+    def test_obj_without_hosts(self):
+        data = {
+            "dump": {
+                "fake_role1": {
+                    "objects":
+                        [{"fake_obj_1": '1'}, {"fake_obj_2": '2'}]},
+            }
+        }
+        conf = Config(data)
+        expected_objs = [
+            {'fake_obj_1': '1'},
+            {'fake_obj_2': '2'}]
+        self.assertItemsEqual(expected_objs, conf.objs)
 
     def test_init(self):
         data = {
