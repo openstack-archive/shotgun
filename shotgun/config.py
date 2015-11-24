@@ -17,6 +17,8 @@ import copy
 import logging
 import time
 
+import six
+
 from shotgun import settings
 
 
@@ -30,11 +32,13 @@ class Config(object):
         self.offline_hosts = set()
         self.objs = deque()
         self.try_again = deque()
-        for properties in self.data.get("dump", {}).itervalues():
-            for host in properties.get("hosts", []):
-                for object_ in properties.get("objects", []):
-                    object_["host"] = host
-                    self.objs.append(copy.copy(object_))
+        for properties in six.itervalues(self.data.get('dump', {})):
+            hosts = properties.get('hosts') or [{}]
+            for obj in properties.get('objects', []):
+                for h in hosts:
+                    obj_new = copy.deepcopy(obj)
+                    obj_new['host'] = h
+                    self.objs.append(obj_new)
 
     def _timestamp(self, name):
         return "{0}-{1}".format(
@@ -68,7 +72,7 @@ class Config(object):
     @staticmethod
     def get_network_address(obj):
         """Returns network address of object."""
-        return obj["host"].get('address', '127.0.0.1')
+        return obj['host'].get('address') or obj['host'].get('hostname')
 
     def on_network_error(self, obj):
         """Lets the object to have another attempt for being proccessed."""
