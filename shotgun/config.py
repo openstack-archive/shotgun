@@ -31,9 +31,14 @@ class Config(object):
         self.objs = deque()
         self.try_again = deque()
         for properties in self.data.get("dump", {}).itervalues():
-            for host in properties.get("hosts", []):
+            hosts = properties.get("hosts")
+            if hosts:
+                for host in properties.get("hosts", []):
+                    for object_ in properties.get("objects", []):
+                        object_["host"] = host
+                        self.objs.append(copy.copy(object_))
+            else:
                 for object_ in properties.get("objects", []):
-                    object_["host"] = host
                     self.objs.append(copy.copy(object_))
 
     def _timestamp(self, name):
@@ -68,7 +73,8 @@ class Config(object):
     @staticmethod
     def get_network_address(obj):
         """Returns network address of object."""
-        return obj["host"].get('address', '127.0.0.1')
+        if obj and 'host' in obj:
+            return obj['host'].get('address') or obj['host'].get('hostname')
 
     def on_network_error(self, obj):
         """Lets the object to have another attempt for being proccessed."""
