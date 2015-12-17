@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+import os
 import random
 import sys
 
@@ -76,7 +78,8 @@ class TestDriver(base.BaseTestCase):
             command_timeout=driver.timeout,
             warn_only=True,
             key_filename=None,
-            abort_on_prompts=True)
+            abort_on_prompts=True,
+            use_shell=True)
         self.assertEqual(result, out)
 
     @mock.patch('shotgun.driver.fabric.api.run')
@@ -98,7 +101,8 @@ class TestDriver(base.BaseTestCase):
             command_timeout=timeout,
             warn_only=mock.ANY,
             key_filename=mock.ANY,
-            abort_on_prompts=mock.ANY)
+            abort_on_prompts=mock.ANY,
+            use_shell=mock.ANY)
 
     @mock.patch('shotgun.driver.utils.execute')
     def test_driver_local_command(self, mexecute):
@@ -269,6 +273,110 @@ class TestFile(base.BaseTestCase):
 
         mget.assert_called_with(data["path"], target_path)
         mremove.assert_called_with(dir_driver.full_dst_path, data['exclude'])
+
+
+class TestCommand(base.BaseTestCase):
+    def setUp(self):
+        self.conf = mock.Mock()
+        self.conf.target = '/some/dir'
+
+    def test_init(self):
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": "some command",
+            "to_file": "some_command.txt"
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        self.assertListEqual(["some command"], driver_inst.cmdname)
+        self.assertEqual("some_command.txt", driver_inst.to_file)
+        self.assertEqual(os.path.join("/some/dir", "somehost",
+                                      "commands", "some_command.txt"),
+                         driver_inst.target_path)
+
+    @mock.patch('shotgun.driver.Command._report_single')
+    def test_report(self, mrepsing):
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": ["cmd1", "cmd2"],
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        reports = [['r1'], ['r2', 'r3']]
+        mrepsing.side_effect = reports
+        replines = []
+        for repline in driver_inst.report():
+            replines.append(repline)
+        self.assertListEqual(list(itertools.chain(*reports)), replines)
+
+    @mock.patch('shotgun.driver.Command.command')
+    def test_report_single(self, mcom):
+        command_retval = mock.Mock()
+        mcom.return_value = command_retval
+        command_retval.stdout = "r1\nr2\nr3"
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": "cmd1\ncmd2",
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        expected = [
+            ("somehost", "cmd1", "r1"),
+            ("", "cmd2", "r2"),
+            ("", "", "r3")
+        ]
+        result = driver_inst._report_single(data["command"])
+        self.assertListEqual(expected, list(result))
+
+    @mock.patch('shotgun.driver.Command._snapshot_single')
+    def test_snapshot(self, msnap_sing):
+        data = {
+            "command": ["cmd1", "cmd2"],
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        driver_inst.snapshot()
+        expected = [mock.call("cmd1"), mock.call("cmd2")]
+        self.assertListEqual(expected, msnap_sing.call_args_list)
+
+    @mock.patch('shotgun.driver.open', create=True,
+                new_callable=mock.mock_open)
+    @mock.patch('shotgun.driver.Command.command')
+    @mock.patch('shotgun.utils.execute')
+    def test_snapshot_single(self, mexec, mcom, mopen):
+        mout = mock.Mock()
+        mout.return_code = 0
+        mout.stdout = "stdout"
+        mout.stderr = "stderr"
+        mcom.return_value = mout
+        driver_inst = shotgun.driver.Command({"command": "cmd"}, self.conf)
+        driver_inst._snapshot_single("cmd")
+        expected_write = [
+            mock.call("===== COMMAND =====: cmd\n"),
+            mock.call("===== RETURN CODE =====: 0\n"),
+            mock.call("===== STDOUT =====:\n"),
+            mock.call("stdout"),
+            mock.call("\n===== STDERR =====:\n"),
+            mock.call("stderr"),
+        ]
+        file_handle_mock = mopen.return_value.__enter__.return_value
+        self.assertListEqual(expected_write,
+                             file_handle_mock.write.call_args_list)
+
+class TestDockerCommand(base.BaseTestCase):
+    def setUp(self):
+        self.conf = mock.Mock()
+        self.conf.target = '/some/dir'
+
+    def test_init(self):
+        data = {
+            "command": ["cmd1", "cmd2"],
+            "container": ["cont1", "cont2"],
+        }
+        driver_inst = shotgun.driver.DockerCommand(data, self.conf)
+        expected = [
+            "dockerctl shell cont1 cmd1",
+            "dockerctl shell cont1 cmd2",
+            "dockerctl shell cont2 cmd1",
+            "dockerctl shell cont2 cmd2",
+        ]
+        self.assertListEqual(expected, driver_inst.cmdname)
 
 
 class TestOffline(base.BaseTestCase):
