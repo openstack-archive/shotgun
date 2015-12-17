@@ -11,3 +11,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import pkg_resources
+
+try:
+    __version__ = pkg_resources.require(__name__)[0].version
+except pkg_resources.DistributionNotFound as e:
+    __version__ = "Unknown"
