@@ -28,8 +28,8 @@ class TestUtils(base.BaseTestCase):
     def test_remove_subdir(self, mexecute):
         utils.remove('/', ['good', '**/*.py'])
         mexecute.assert_has_calls([
-            mock.call('shopt -s globstar; rm -rf /good', shell=True),
-            mock.call('shopt -s globstar; rm -rf /**/*.py', shell=True)])
+            mock.call('shopt -s globstar; rm -rf /good'),
+            mock.call('shopt -s globstar; rm -rf /**/*.py')])
 
     @mock.patch('shotgun.utils.os.walk')
     def test_iterfiles(self, mwalk):
