@@ -17,6 +17,7 @@
 import argparse
 import json
 import logging
+import warnings
 
 from shotgun.logger import configure_logger
 configure_logger()
@@ -68,4 +69,6 @@ def make_snapshot(args):
 
 def main():
     """Entry point"""
+    warnings.warn("This command is deprecated. "
+                  "Please use 'shotgun2' instead", DeprecationWarning)
     make_snapshot(parse_args())
