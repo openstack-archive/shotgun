@@ -68,4 +68,6 @@ def make_snapshot(args):
 
 def main():
     """Entry point"""
+    print("WARNING: This command is deprecated. "
+          "Please use 'shotgun2' instead")
     make_snapshot(parse_args())
