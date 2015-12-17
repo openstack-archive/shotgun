@@ -14,9 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import argparse
-import json
 import logging
+import yaml
+
+from cliff.app import App
+from cliff.command import Command
+from cliff.commandmanager import CommandManager
 
 from shotgun.logger import configure_logger
 configure_logger()
@@ -28,44 +31,36 @@ from shotgun.manager import Manager
 logger = logging.getLogger(__name__)
 
 
-def parse_args():
-    """Parse arguments and return them
-
-    :returns: argparse object
-    """
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '-c',
-        '--config',
-        help='configuration file',
-        required=True)
-    return parser.parse_args()
+class Base(object):
+    def initialize_cmd(self, parsed_args):
+        with open(parsed_args.input_file, "r") as f:
+            self.config = Config(yaml.load(f))
+        self.manager = Manager(self.config)
 
 
-def read_config(config_path):
-    """Reads config
+class SnapshotCommand(Command, Base):
 
-    :param config_path: path to configuration file
-    :returns: dict with configuration data
-    """
-    with open(config_path, "r") as fo:
-        config = json.loads(fo.read())
+    def get_parser(self, prog_name):
+        parser = super(SnapshotCommand, self).get_parser(prog_name)
+        parser.add_argument(
+            '--input-file',
+            required=True,
+            help='Path to snapshot config file')
+        return parser
 
-    return config
+    def take_action(self, parsed_args):
+        """Generates snapshot
 
-
-def make_snapshot(args):
-    """Generates snapshot
-
-    :param args: argparse object
-    """
-    config_object = Config(read_config(args.config))
-    manager = Manager(config_object)
-    snapshot_path = manager.snapshot()
-    logger.info(u'Snapshot path: {0}'.format(snapshot_path))
+        :param args: argparse object
+        """
+        self.initialize_cmd(parsed_args)
+        snapshot_path = self.manager.snapshot()
+        logger.info(u'Snapshot path: {0}'.format(snapshot_path))
 
 
-def main():
-    """Entry point"""
-    make_snapshot(parse_args())
+def main(argv=None):
+    return App(
+        description="Shotgun CLI",
+        version='v1',
+        command_manager=CommandManager('shotgun')
+    ).run(argv)

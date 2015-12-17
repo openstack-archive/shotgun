@@ -14,6 +14,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Requires:    postgresql
+Requires:    python-cliff >= 1.7.0
 Requires:    python-fabric >= 1.10.0
 Requires:    python-argparse
 Requires:    python-six >= 1.9.0
