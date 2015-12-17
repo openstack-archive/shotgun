@@ -33,4 +33,9 @@ setuptools.setup(
         'Fabric >= 1.10.0'],
     entry_points={
         'console_scripts': [
-            'shotgun = shotgun.cli:main']})
+            'shotgun = shotgun.cli:main',
+            'shotgun2 = shotgun.cli2:main'],
+        'shotgun': [
+            'snapshot = shotgun.cli:SnapshotCommand',
+        ]
+    })
