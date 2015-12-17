@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import logging
 import os
 import pprint
@@ -55,6 +56,7 @@ class Driver(object):
             "postgres": Postgres,
             "xmlrpc": XmlRpc,
             "command": Command,
+            "docker_command": DockerCommand,
             "offline": Offline,
         }.get(driver_type, cls)(data, conf)
 
@@ -85,6 +87,10 @@ class Driver(object):
     def snapshot(self):
         raise NotImplementedError
 
+    def report(sefl):
+        """Should be generator"""
+        raise NotImplementedError
+
     def command(self, command):
         out = CommandOut()
 
@@ -98,6 +104,7 @@ class Driver(object):
                     command_timeout=self.timeout,  # command execution timeout
                     warn_only=True,                # don't exit on error
                     abort_on_prompts=True,         # non-interactive mode
+                    use_shell=True,
                 ):
                     logger.debug(
                         "Running remote command: host: %s command: %s",
@@ -113,8 +120,8 @@ class Driver(object):
                     out.return_code = output.return_code
             else:
                 logger.debug("Running local command: %s", command)
-                out.return_code, out.stdout, out.stderr = utils.execute(
-                    command)
+                out.return_code, out.stdout, out.stderr = \
+                    utils.execute(command)
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
             raise
@@ -186,6 +193,7 @@ class File(Driver):
 
         if self.exclude:
             utils.remove(self.full_dst_path, self.exclude)
+
 
 Dir = File
 
@@ -262,16 +270,23 @@ class Command(Driver):
 
     def __init__(self, data, conf):
         super(Command, self).__init__(data, conf)
-        self.cmdname = data["command"]
-        self.to_file = data["to_file"]
+        if isinstance(data["command"], list):
+            self.cmdname = data["command"]
+        else:
+            self.cmdname = [data["command"]]
+        self.to_file = data.get("to_file", "/dev/null")
         self.target_path = os.path.join(
             self.conf.target, self.host, "commands", self.to_file)
 
     def snapshot(self):
-        out = self.command(self.cmdname)
+        for cmd in self.cmdname:
+                self._snapshot_single(cmd)
+
+    def _snapshot_single(self, cmd):
+        out = self.command(cmd)
         utils.execute('mkdir -p "{0}"'.format(os.path.dirname(
             self.target_path)))
-        with open(self.target_path, "w") as f:
+        with open(self.target_path, "a") as f:
             f.write("===== COMMAND =====: {0}\n".format(self.cmdname))
             f.write("===== RETURN CODE =====: {0}\n".format(out.return_code))
             f.write("===== STDOUT =====:\n")
@@ -280,6 +295,31 @@ class Command(Driver):
             f.write("\n===== STDERR =====:\n")
             if out.stderr:
                 f.write(out.stderr)
+
+    def report(self):
+        for cmd in self.cmdname:
+            for report_line in self._report_single(cmd):
+                yield report_line
+
+    def _report_single(self, cmd):
+        return itertools.izip_longest(
+            [self.host],
+            cmd.split('\n'),
+            self.command(cmd).stdout.split('\n'),
+            fillvalue='')
+
+
+class DockerCommand(Command):
+    def __init__(self, data, conf):
+        super(DockerCommand, self).__init__(data, conf)
+        if isinstance(data["container"], list):
+            self.cmdname = [
+                "dockerctl shell {0} {1}".format(cnt, cmd)
+                for cnt in data["container"] for cmd in self.cmdname]
+        else:
+            self.cmdname = [
+                "dockerctl shell {0} {1}".format(data["container"], cmd)
+                for cmd in self.cmdname]
 
 
 class Offline(Driver):
