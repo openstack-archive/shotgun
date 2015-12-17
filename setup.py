@@ -17,7 +17,7 @@ import setuptools
 
 setuptools.setup(
     name='shotgun',
-    version='8.0.0',
+    version='9.0.0',
     description='Shotgun package',
     long_description='Shotgun is diagnostic snapshot generator',
     classifiers=[
