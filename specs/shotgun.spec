@@ -14,6 +14,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Requires:    postgresql
+Requires:    python-cliff >= 1.7.0
 Requires:    python-fabric >= 1.10.0
 Requires:    python-argparse
 Requires:    python-six >= 1.9.0
@@ -35,9 +36,12 @@ cd %{_builddir}/%{name}-%{version} && python setup.py build
 
 %install
 cd %{_builddir}/%{name}-%{version} && python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=%{_builddir}/%{name}-%{version}/INSTALLED_FILES
+install -d -m 755 %{buildroot}%{_sysconfdir}/shotgun
+install -p -D -m 644 %{_builddir}/%{name}-%{version}/etc/report.yaml  %{buildroot}%{_sysconfdir}/shotgun/report.yaml
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files -f  %{_builddir}/%{name}-%{version}/INSTALLED_FILES
 %defattr(-,root,root)
+%{_sysconfdir}/shotgun/report.yaml
