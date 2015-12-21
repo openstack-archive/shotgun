@@ -35,12 +35,14 @@ class CommandOut(object):
     stdout = None
     return_code = None
     stderr = None
+    output = None
 
     def __eq__(self, other):
         return (
             str(self.stdout) == str(other.stdout) and
             str(self.stderr) == str(other.stderr) and
-            str(self.return_code) == str(other.return_code)
+            str(self.return_code) == str(other.return_code) and
+            str(self.output) == str(other.output)
         )
 
 
@@ -109,6 +111,7 @@ class Driver(object):
                     # NOTE(prmtl): because of pty=True (default) and
                     # combine_stderr=True (default) stderr is combined
                     # with stdout
+                    out.output = output
                     out.stdout = raw_stdout.getvalue()
                     out.return_code = output.return_code
             else:
@@ -218,7 +221,7 @@ class Postgres(Driver):
                     fo.seek(0, 2)
                     fo.write("{0}\n".format(authline))
             os.chmod(pgpass, stat.S_IRUSR + stat.S_IWUSR)
-        temp = self.command("mktemp").stdout.strip()
+        temp = self.command("mktemp").output.strip()
         self.command("pg_dump -h {dbhost} -U {username} -w "
                      "-f {file} {dbname}".format(
                          dbhost=self.dbhost, username=self.username,
