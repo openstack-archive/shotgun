@@ -118,6 +118,7 @@ class Driver(object):
                 logger.debug("Running local command: %s", command)
                 out.return_code, out.stdout, out.stderr = utils.execute(
                     command)
+                out.output = out.stdout
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
             raise
