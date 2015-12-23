@@ -107,6 +107,7 @@ class TestDriver(base.BaseTestCase):
         out = shotgun.driver.CommandOut()
         out.stdout = "STDOUT"
         out.stderr = "STDERR"
+        out.output = "STDOUT"
         out.return_code = "RETURN_CODE"
 
         command = "COMMAND"
