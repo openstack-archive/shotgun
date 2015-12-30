@@ -101,6 +101,7 @@ class Driver(object):
                     command_timeout=self.timeout,  # command execution timeout
                     warn_only=True,                # don't exit on error
                     abort_on_prompts=True,         # non-interactive mode
+                    use_shell=True,
                 ):
                     logger.debug(
                         "Running remote command: host: %s command: %s",
