@@ -325,6 +325,26 @@ class TestCommand(base.BaseTestCase):
                              file_handle_mock.write.call_args_list)
 
 
+class TestDockerCommand(base.BaseTestCase):
+    def setUp(self):
+        self.conf = mock.Mock()
+        self.conf.target = '/some/dir'
+
+    def test_init(self):
+        data = {
+            "command": ["cmd1", "cmd2"],
+            "container": ["cont1", "cont2"],
+        }
+        driver_inst = shotgun.driver.DockerCommand(data, self.conf)
+        expected = [
+            "dockerctl shell cont1 cmd1",
+            "dockerctl shell cont1 cmd2",
+            "dockerctl shell cont2 cmd1",
+            "dockerctl shell cont2 cmd2",
+        ]
+        self.assertListEqual(expected, driver_inst.cmdname)
+
+
 class TestOffline(base.BaseTestCase):
 
     @mock.patch('shotgun.driver.open', create=True,
