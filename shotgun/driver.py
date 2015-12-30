@@ -266,17 +266,24 @@ class Command(Driver):
 
     def __init__(self, data, conf):
         super(Command, self).__init__(data, conf)
-        self.cmdname = data["command"]
-        self.to_file = data["to_file"]
+        if isinstance(data["command"], list):
+            self.cmdname = data["command"]
+        else:
+            self.cmdname = [data["command"]]
+        self.to_file = data.get("to_file", "/dev/null")
         self.target_path = os.path.join(
             self.conf.target, self.host, "commands", self.to_file)
 
     def snapshot(self):
-        out = self.command(self.cmdname)
+        for cmd in self.cmdname:
+            self._snapshot_single(cmd)
+
+    def _snapshot_single(self, cmd):
+        out = self.command(cmd)
         utils.execute('mkdir -p "{0}"'.format(os.path.dirname(
             self.target_path)))
-        with open(self.target_path, "w") as f:
-            f.write("===== COMMAND =====: {0}\n".format(self.cmdname))
+        with open(self.target_path, "a") as f:
+            f.write("===== COMMAND =====: {0}\n".format(cmd))
             f.write("===== RETURN CODE =====: {0}\n".format(out.return_code))
             f.write("===== STDOUT =====:\n")
             if out.stdout:
