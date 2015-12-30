@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import logging
 import os
 import pprint
@@ -86,6 +87,10 @@ class Driver(object):
         self.timeout = data.get("timeout", self.conf.timeout)
 
     def snapshot(self):
+        raise NotImplementedError
+
+    def report(sefl):
+        """Should be generator"""
         raise NotImplementedError
 
     def command(self, command):
@@ -293,6 +298,18 @@ class Command(Driver):
             f.write("\n===== STDERR =====:\n")
             if out.stderr:
                 f.write(out.stderr)
+
+    def report(self):
+        for cmd in self.cmdname:
+            for report_line in self._report_single(cmd):
+                yield report_line
+
+    def _report_single(self, cmd):
+        return itertools.izip_longest(
+            [self.host],
+            cmd.split('\n'),
+            self.command(cmd).stdout.split('\n'),
+            fillvalue='')
 
 
 class DockerCommand(Command):
