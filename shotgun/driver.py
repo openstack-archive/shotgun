@@ -57,6 +57,7 @@ class Driver(object):
             "postgres": Postgres,
             "xmlrpc": XmlRpc,
             "command": Command,
+            "docker_command": DockerCommand,
             "offline": Offline,
         }.get(driver_type, cls)(data, conf)
 
@@ -291,6 +292,16 @@ class Command(Driver):
             f.write("\n===== STDERR =====:\n")
             if out.stderr:
                 f.write(out.stderr)
+
+
+class DockerCommand(Command):
+    def __init__(self, data, conf):
+        super(DockerCommand, self).__init__(data, conf)
+        self.cmds = [
+            "docker exec "
+            "$(docker ps -q --filter 'name={0}' --format '{{.Names}}') "
+            "{1}".format(cnt, cmd)
+            for cnt in data["containers"] for cmd in self.cmds]
 
 
 class Offline(Driver):
