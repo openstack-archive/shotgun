@@ -20,11 +20,13 @@ import yaml
 from cliff.app import App
 from cliff.command import Command
 from cliff.commandmanager import CommandManager
+from cliff.lister import Lister
 
 import shotgun
 from shotgun.logger import configure_logger
 
 from shotgun.config import Config
+from shotgun.logger import configure_logger
 from shotgun.manager import Manager
 
 
@@ -56,6 +58,24 @@ class SnapshotCommand(Command, Base):
         self.initialize_cmd(parsed_args)
         snapshot_path = self.manager.snapshot()
         logger.info(u'Snapshot path: {0}'.format(snapshot_path))
+
+
+class ReportCommand(Lister, Base):
+
+    columns = ['Host', 'Reporter', 'Report']
+
+    def get_parser(self, prog_name):
+        parser = super(ReportCommand, self).get_parser(prog_name)
+        parser.add_argument(
+            '--config',
+            default='/etc/shotgun/report.yaml',
+            help='Path to report config file')
+        return parser
+
+    def take_action(self, parsed_args):
+        self.initialize_cmd(parsed_args)
+        data = [line for line in self.manager.report()]
+        return (self.columns, data)
 
 
 def main(argv=None):
