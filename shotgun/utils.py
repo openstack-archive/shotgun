@@ -16,7 +16,6 @@ import copy
 import logging
 import os
 import re
-import shlex
 import socket
 from StringIO import StringIO
 import subprocess
@@ -77,40 +76,17 @@ def compress(target, level, keep_target=False):
         execute("rm -r {0}".format(target))
 
 
-def execute(command, to_filename=None, env=None, shell=False):
+def execute(command, env=None):
     logger.debug("Trying to execute command: %s", command)
-    commands = [c.strip() for c in re.split(ur'\|', command)]
+
     env = env or os.environ
     env["PATH"] = "/bin:/usr/bin:/sbin:/usr/sbin"
 
-    to_file = None
-    if to_filename:
-        to_file = open(to_filename, 'wb')
-
-    process = []
-    for c in commands:
-        try:
-            # NOTE(eli): Python's shlex implementation doesn't like unicode.
-            # We have to convert to ascii before shlex'ing the command.
-            # http://bugs.python.org/issue6988
-            encoded_command = c.encode('ascii')
-            process.append(subprocess.Popen(
-                shlex.split(encoded_command) if not shell else encoded_command,
-                env=env,
-                stdin=(process[-1].stdout if process else None),
-                stdout=(to_file
-                        if (len(process) == len(commands) - 1) and to_file
-                        else subprocess.PIPE),
-                stderr=(subprocess.PIPE),
-                shell=shell
-            ))
-        except OSError as e:
-            return (1, "", "{0}\n".format(e))
-
-        if len(process) >= 2:
-            process[-2].stdout.close()
-    stdout, stderr = process[-1].communicate()
-    return (process[-1].returncode, stdout, stderr)
+    process = subprocess.Popen(
+        command, env=env, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, shell=True)
+    stdout, stderr = process.communicate()
+    return (process.poll(), stdout, stderr)
 
 
 class CCStringIO(StringIO):
