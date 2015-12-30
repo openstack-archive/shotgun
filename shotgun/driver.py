@@ -293,6 +293,19 @@ class Command(Driver):
                 f.write(out.stderr)
 
 
+class DockerCommand(Command):
+    def __init__(self, data, conf):
+        super(DockerCommand, self).__init__(data, conf)
+        if isinstance(data["container"], list):
+            self.cmdname = [
+                "dockerctl shell {0} {1}".format(cnt, cmd)
+                for cnt in data["container"] for cmd in self.cmdname]
+        else:
+            self.cmdname = [
+                "dockerctl shell {0} {1}".format(data["container"], cmd)
+                for cmd in self.cmdname]
+
+
 class Offline(Driver):
 
     def __init__(self, data, conf):
