@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 import random
 import sys
 
@@ -269,6 +270,59 @@ class TestFile(base.BaseTestCase):
 
         mget.assert_called_with(data["path"], target_path)
         mremove.assert_called_with(dir_driver.full_dst_path, data['exclude'])
+
+
+class TestCommand(base.BaseTestCase):
+    def setUp(self):
+        self.conf = mock.Mock()
+        self.conf.target = '/some/dir'
+
+    def test_init(self):
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": "some command",
+            "to_file": "some_command.txt"
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        self.assertListEqual(["some command"], driver_inst.cmds)
+        self.assertEqual("some_command.txt", driver_inst.to_file)
+        self.assertEqual(os.path.join("/some/dir", "somehost",
+                                      "commands", "some_command.txt"),
+                         driver_inst.target_path)
+
+    @mock.patch('shotgun.driver.Command._snapshot_single')
+    def test_snapshot(self, msnap_sing):
+        data = {
+            "command": ["cmd1", "cmd2"],
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        driver_inst.snapshot()
+        expected = [mock.call("cmd1"), mock.call("cmd2")]
+        self.assertListEqual(expected, msnap_sing.call_args_list)
+
+    @mock.patch('shotgun.driver.open', create=True,
+                new_callable=mock.mock_open)
+    @mock.patch('shotgun.driver.Command.command')
+    @mock.patch('shotgun.utils.execute')
+    def test_snapshot_single(self, mexec, mcom, mopen):
+        mout = mock.Mock()
+        mout.return_code = 0
+        mout.stdout = "stdout"
+        mout.stderr = "stderr"
+        mcom.return_value = mout
+        driver_inst = shotgun.driver.Command({"command": "cmd"}, self.conf)
+        driver_inst._snapshot_single("cmd")
+        expected_write = [
+            mock.call("===== COMMAND =====: cmd\n"),
+            mock.call("===== RETURN CODE =====: 0\n"),
+            mock.call("===== STDOUT =====:\n"),
+            mock.call("stdout"),
+            mock.call("\n===== STDERR =====:\n"),
+            mock.call("stderr"),
+        ]
+        file_handle_mock = mopen.return_value.__enter__.return_value
+        self.assertListEqual(expected_write,
+                             file_handle_mock.write.call_args_list)
 
 
 class TestOffline(base.BaseTestCase):
