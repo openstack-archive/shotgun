@@ -284,7 +284,7 @@ class TestCommand(base.BaseTestCase):
             "to_file": "some_command.txt"
         }
         driver_inst = shotgun.driver.Command(data, self.conf)
-        self.assertListEqual(["some command"], driver_inst.cmdname)
+        self.assertListEqual(["some command"], driver_inst.cmds)
         self.assertEqual("some_command.txt", driver_inst.to_file)
         self.assertEqual(os.path.join("/some/dir", "somehost",
                                       "commands", "some_command.txt"),
@@ -323,6 +323,29 @@ class TestCommand(base.BaseTestCase):
         file_handle_mock = mopen.return_value.__enter__.return_value
         self.assertListEqual(expected_write,
                              file_handle_mock.write.call_args_list)
+
+
+class TestDockerCommand(base.BaseTestCase):
+    def setUp(self):
+        self.conf = mock.Mock()
+        self.conf.target = '/some/dir'
+
+    def test_init(self):
+        data = {
+            "command": ["cmd1", "cmd2"],
+            "containers": ["cont1", "cont2"],
+        }
+        driver_inst = shotgun.driver.DockerCommand(data, self.conf)
+        template_str = (
+            "docker exec "
+            "$(docker ps -q --filter 'name={0}' --format '{{.Names}}') {1}")
+        expected = [
+            template_str.format("cont1", "cmd1"),
+            template_str.format("cont1", "cmd2"),
+            template_str.format("cont2", "cmd1"),
+            template_str.format("cont2", "cmd2"),
+        ]
+        self.assertListEqual(expected, driver_inst.cmds)
 
 
 class TestOffline(base.BaseTestCase):

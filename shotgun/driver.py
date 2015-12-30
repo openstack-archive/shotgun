@@ -57,6 +57,7 @@ class Driver(object):
             "postgres": Postgres,
             "xmlrpc": XmlRpc,
             "command": Command,
+            "docker_command": DockerCommand,
             "offline": Offline,
         }.get(driver_type, cls)(data, conf)
 
@@ -267,15 +268,15 @@ class Command(Driver):
     def __init__(self, data, conf):
         super(Command, self).__init__(data, conf)
         if isinstance(data["command"], list):
-            self.cmdname = data["command"]
+            self.cmds = data["command"]
         else:
-            self.cmdname = [data["command"]]
+            self.cmds = [data["command"]]
         self.to_file = data.get("to_file", "/dev/null")
         self.target_path = os.path.join(
             self.conf.target, self.host, "commands", self.to_file)
 
     def snapshot(self):
-        for cmd in self.cmdname:
+        for cmd in self.cmds:
             self._snapshot_single(cmd)
 
     def _snapshot_single(self, cmd):
@@ -291,6 +292,16 @@ class Command(Driver):
             f.write("\n===== STDERR =====:\n")
             if out.stderr:
                 f.write(out.stderr)
+
+
+class DockerCommand(Command):
+    def __init__(self, data, conf):
+        super(DockerCommand, self).__init__(data, conf)
+        self.cmds = [
+            "docker exec "
+            "$(docker ps -q --filter 'name={0}' --format '{{.Names}}') "
+            "{1}".format(cnt, cmd)
+            for cnt in data["containers"] for cmd in self.cmds]
 
 
 class Offline(Driver):
