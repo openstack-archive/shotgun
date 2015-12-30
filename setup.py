@@ -37,5 +37,6 @@ setuptools.setup(
             'shotgun2 = shotgun.cli2:main'],
         'shotgun': [
             'snapshot = shotgun.cli2:SnapshotCommand',
+            'report = shotgun.cli2:ReportCommand'
         ]
     })

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import logging
 import os
 import pprint
@@ -47,6 +48,8 @@ class CommandOut(object):
 
 
 class Driver(object):
+
+    default_report_message = 'Reporting is not implemented for the driver.'
 
     @classmethod
     def getDriver(cls, data, conf):
@@ -87,6 +90,12 @@ class Driver(object):
 
     def snapshot(self):
         raise NotImplementedError
+
+    def report(self):
+        """Should be generator"""
+        yield (self.host,
+               'Driver: {0}'.format(self.__class__.__name__),
+               self.default_report_message)
 
     def command(self, command):
         out = CommandOut()
@@ -294,18 +303,34 @@ class Command(Driver):
             if out.stderr:
                 f.write(out.stderr)
 
+    def report(self):
+        for cmd in self.cmds:
+            for report_line in self._report_single(cmd):
+                yield report_line
+
+    def _report_single(self, cmd):
+        return itertools.izip_longest(
+            [self.host],
+            cmd.split('\n'),
+            self.command(cmd).stdout.split('\n'),
+            fillvalue='')
+
 
 class DockerCommand(Command):
     def __init__(self, data, conf):
         super(DockerCommand, self).__init__(data, conf)
         self.cmds = [
-            "docker exec "
-            "$(docker ps -q --filter 'name={0}' --format '{{.Names}}') "
-            "{1}".format(cnt, cmd)
+            'docker exec \\\n'
+            '$(docker ps -q \\\n'
+            '  --filter \'name={0}\' \\\n'
+            '  --format \'{{{{.Names}}}}\') '
+            '{1}'.format(cnt, cmd)
             for cnt in data["containers"] for cmd in self.cmds]
 
 
 class Offline(Driver):
+
+    default_report_message = 'Network error occured. Host might be offline.'
 
     def __init__(self, data, conf):
         super(Offline, self).__init__(data, conf)

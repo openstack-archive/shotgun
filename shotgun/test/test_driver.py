@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import os
 import random
 import sys
@@ -333,6 +334,38 @@ class TestCommand(base.BaseTestCase):
         self.assertListEqual(expected_write,
                              file_handle_mock.write.call_args_list)
 
+    @mock.patch('shotgun.driver.Command._report_single')
+    def test_report(self, mrepsing):
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": ["cmd1", "cmd2"],
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        reports = [['r1'], ['r2', 'r3']]
+        mrepsing.side_effect = reports
+        replines = []
+        for repline in driver_inst.report():
+            replines.append(repline)
+        self.assertListEqual(list(itertools.chain(*reports)), replines)
+
+    @mock.patch('shotgun.driver.Command.command')
+    def test_report_single(self, mcom):
+        command_retval = mock.Mock()
+        mcom.return_value = command_retval
+        command_retval.stdout = "r1\nr2\nr3"
+        data = {
+            "host": {"hostname": "somehost"},
+            "command": "cmd1\ncmd2",
+        }
+        driver_inst = shotgun.driver.Command(data, self.conf)
+        expected = [
+            ("somehost", "cmd1", "r1"),
+            ("", "cmd2", "r2"),
+            ("", "", "r3")
+        ]
+        result = driver_inst._report_single(data["command"])
+        self.assertListEqual(expected, list(result))
+
 
 class TestDockerCommand(base.BaseTestCase):
     def setUp(self):
@@ -346,8 +379,10 @@ class TestDockerCommand(base.BaseTestCase):
         }
         driver_inst = shotgun.driver.DockerCommand(data, self.conf)
         template_str = (
-            "docker exec "
-            "$(docker ps -q --filter 'name={0}' --format '{{.Names}}') {1}")
+            'docker exec \\\n'
+            '$(docker ps -q \\\n'
+            '  --filter \'name={0}\' \\\n'
+            '  --format \'{{{{.Names}}}}\') {1}')
         expected = [
             template_str.format("cont1", "cmd1"),
             template_str.format("cont1", "cmd2"),
