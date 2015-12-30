@@ -34,11 +34,11 @@ class Manager(object):
         utils.execute("rm -rf {0}".format(os.path.dirname(self.conf.target)))
         for obj_data in self.conf.objects:
             logger.debug("Dumping: %s", obj_data)
-            self.snapshot_single(obj_data)
+            self.action_single(obj_data, action='snapshot')
 
         logger.debug("Dumping shotgun log and archiving dump directory: %s",
                      self.conf.target)
-        self.snapshot_single(self.conf.self_log_object)
+        self.action_single(self.conf.self_log_object, action='snapshot')
 
         utils.compress(self.conf.target, self.conf.compression_level)
 
@@ -46,9 +46,16 @@ class Manager(object):
             fo.write("{0}.tar.xz".format(self.conf.target))
         return "{0}.tar.xz".format(self.conf.target)
 
-    def snapshot_single(self, object):
+    def action_single(self, object, action='snapshot'):
         driver = Driver.getDriver(object, self.conf)
         try:
-            driver.snapshot()
+            return getattr(driver, action)()
         except fabric.exceptions.NetworkError:
             self.conf.on_network_error(object)
+
+    def report(self):
+        logger.debug("Making report")
+        for obj_data in self.conf.objects:
+            logger.debug("Gathering report for: %s", obj_data)
+            for report in self.action_single(obj_data, action='report'):
+                yield report
