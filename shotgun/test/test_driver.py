@@ -77,7 +77,8 @@ class TestDriver(base.BaseTestCase):
             command_timeout=driver.timeout,
             warn_only=True,
             key_filename=None,
-            abort_on_prompts=True)
+            abort_on_prompts=True,
+            use_shell=True)
         self.assertEqual(result, out)
 
     @mock.patch('shotgun.driver.fabric.api.run')
@@ -99,7 +100,8 @@ class TestDriver(base.BaseTestCase):
             command_timeout=timeout,
             warn_only=mock.ANY,
             key_filename=mock.ANY,
-            abort_on_prompts=mock.ANY)
+            abort_on_prompts=mock.ANY,
+            use_shell=mock.ANY)
 
     @mock.patch('shotgun.driver.utils.execute')
     def test_driver_local_command(self, mexecute):
