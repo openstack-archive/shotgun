@@ -93,3 +93,42 @@ class TestManager(base.BaseTestCase):
                                mock.call(offline_obj, conf),
                                mock.call(offline_obj, conf)], any_order=True)
         mexecute.assert_called_once_with('rm -rf /tmp')
+
+    @mock.patch('shotgun.manager.Manager.action_single')
+    def test_report(self, mock_action):
+        objs = ["o1", "o2"]
+        mock_action.side_effect = [["r1", "r2"], ["r3"]]
+        conf = mock.Mock()
+        conf.objects = objs
+        manager = Manager(conf)
+        manager.action_single = mock_action
+        reports = []
+        for rep in manager.report():
+            reports.append(rep)
+        self.assertEqual(["r1", "r2", "r3"], reports)
+
+        expected_calls = [
+            mock.call('o1', action='report'),
+            mock.call('o2', action='report')]
+        self.assertEqual(expected_calls, mock_action.call_args_list)
+
+    @mock.patch('shotgun.manager.Driver')
+    def test_action_single(self, mock_driver):
+        mock_driver_instance = mock.Mock()
+        mock_driver_instance.report = mock.Mock()
+        mock_driver_instance.snapshot = mock.Mock()
+        mock_driver.getDriver = mock.Mock(return_value=mock_driver_instance)
+        manager = Manager('conf')
+
+        manager.action_single('object', action='report')
+        mock_driver.getDriver.assert_called_once_with('object', 'conf')
+        mock_driver_instance.report.assert_called_once_with()
+        self.assertFalse(mock_driver_instance.snapshot.called)
+        mock_driver.getDriver.reset_mock()
+
+        # default action should be 'snapshot'
+        manager.action_single('object')
+        mock_driver.getDriver.assert_called_once_with('object', 'conf')
+        mock_driver_instance.report.mock_reset()
+        mock_driver_instance.snapshot.assert_called_once_with()
+        self.assertFalse(mock_driver_instance.report.called)

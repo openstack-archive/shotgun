@@ -1,0 +1,35 @@
+dump:
+  local:
+    objects:
+    - type: command
+      command:
+      - cat /etc/fuel_build_id
+      - cat /etc/fuel_release
+      - cat /etc/fuel_openstack_version
+      - |
+        rpm -qa | \
+        egrep 'fuel|astute|network-checker|shotgun' | \
+        while read package; do
+          echo $package
+          rpm -q --changelog $package | head -2
+        done
+    - type: docker_command
+      container:
+      - nginx
+      - rabbitmq
+      - astute
+      - rsync
+      - keystone
+      - postgres
+      - rsyslog
+      - nailgun
+      - cobbler
+      - ostf
+      - mcollective
+      command: |
+        rpm -qa | \
+        egrep 'fuel|astute|network-checker|shotgun' | \
+        while read package; do
+          echo $package
+          rpm -q --changelog $package | head -2
+        done
