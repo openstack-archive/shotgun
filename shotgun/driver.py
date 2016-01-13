@@ -161,11 +161,11 @@ class Driver(object):
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
             else:
+                command = 'ln -s "{}" "{}"'.format(path, target_path)
                 logger.debug(
-                    "Getting local file: cp -r %s %s", path, target_path)
+                    "Symlinking to local file: {}".format(command))
                 utils.execute('mkdir -p "{0}"'.format(target_path))
-                return utils.execute(
-                    'cp -r "{0}" "{1}"'.format(path, target_path))
+                return utils.execute(command)
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
             raise
@@ -199,8 +199,6 @@ class File(Driver):
         """
         self.get(self.path, self.target_path)
 
-        if self.exclude:
-            utils.remove(self.full_dst_path, self.exclude)
 
 Dir = File
 
