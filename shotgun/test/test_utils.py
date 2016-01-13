@@ -58,9 +58,27 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(compress_env['XZ_OPT'], level)
         self.assertEqual(
             compress_call[0][0],
-            'tar cJvf /path/target.tar.xz -C /path target')
+            'tar chJvf /path/target.tar.xz -C /path target')
 
         self.assertEqual(rm_call[0][0], 'rm -r /path/target')
+
+    @mock.patch('shotgun.utils.execute')
+    def test_compress_exclude(self, mexecute):
+        target = '/path/target'
+        level = '-3'
+
+        exclusions = ['/path/to/exclude1', '/path/to/exclude2']
+
+        utils.compress(target, level, exclude=exclusions)
+
+        compress_call = mexecute.call_args_list[0]
+
+        compress_env = compress_call[1]['env']
+        self.assertEqual(compress_env['XZ_OPT'], level)
+        self.assertEqual(
+            compress_call[0][0],
+            'tar chJvf /path/target.tar.xz -C /path target '
+            '--exclude /path/to/exclude1 --exclude /path/to/exclude2')
 
 
 class TestCCStringIO(base.BaseTestCase):
