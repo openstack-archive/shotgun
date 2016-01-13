@@ -177,7 +177,7 @@ class TestDriver(base.BaseTestCase):
         driver.get(remote_path, target_path)
         self.assertEqual(mexecute.mock_calls, [
             mock.call('mkdir -p "{0}"'.format(target_path)),
-            mock.call('cp -r "{0}" "{1}"'.format(remote_path, target_path))])
+            mock.call('ln -s "{0}" "{1}"'.format(remote_path, target_path))])
 
     def test_use_timeout_from_global_conf(self):
         data = {}
