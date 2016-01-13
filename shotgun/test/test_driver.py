@@ -148,10 +148,14 @@ class TestDriver(base.BaseTestCase):
         mfabrun.assert_called_with(command, stdout=mstdout)
         self.assertEqual(result.stdout, 'FULL STDOUT')
 
-    @mock.patch('shotgun.driver.utils.execute')
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('os.symlink')
+    @mock.patch('os.makedirs')
+    @mock.patch('shotgun.utils.execute')
     @mock.patch('shotgun.driver.fabric.api.settings')
     @mock.patch('shotgun.driver.fabric.api.get')
-    def test_driver_get(self, mfabget, mfabset, mexecute):
+    def test_driver_get(self, mfabget, mfabset, mexecute, mmakedirs, msymlink,
+                        _):
         mexecute.return_value = ("RETURN_CODE", "STDOUT", "STDERR")
         remote_path = "/remote_dir/remote_file"
         target_path = "/target_dir"
@@ -175,9 +179,8 @@ class TestDriver(base.BaseTestCase):
         mexecute.reset_mock()
         driver = shotgun.driver.Driver({}, conf)
         driver.get(remote_path, target_path)
-        self.assertEqual(mexecute.mock_calls, [
-            mock.call('mkdir -p "{0}"'.format(target_path)),
-            mock.call('cp -r "{0}" "{1}"'.format(remote_path, target_path))])
+        mmakedirs.assert_called_once_with(target_path)
+        msymlink.assert_called_once_with(remote_path, target_path)
 
     def test_use_timeout_from_global_conf(self):
         data = {}
@@ -251,28 +254,6 @@ class TestFile(base.BaseTestCase):
         file_driver.snapshot()
 
         mget.assert_called_with(data["path"], target_path)
-
-    @mock.patch('shotgun.driver.utils.remove')
-    @mock.patch('shotgun.driver.Driver.get')
-    def test_dir_exclude_called(self, mget, mremove):
-        data = {
-            "type": "dir",
-            "path": "/remote_dir/",
-            "exclude": ["*test"],
-            "host": {
-                "hostname": "remote_host",
-                "address": "10.109.0.2",
-            },
-        }
-        conf = mock.MagicMock()
-        conf.target = "/target"
-        dir_driver = shotgun.driver.Dir(data, conf)
-
-        target_path = "/target/remote_host/remote_dir"
-        dir_driver.snapshot()
-
-        mget.assert_called_with(data["path"], target_path)
-        mremove.assert_called_with(dir_driver.full_dst_path, data['exclude'])
 
 
 class TestCommand(base.BaseTestCase):

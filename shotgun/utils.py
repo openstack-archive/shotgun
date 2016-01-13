@@ -58,19 +58,23 @@ def remove(full_dst_path, excludes):
         execute("shopt -s globstar; rm -rf {0}".format(path))
 
 
-def compress(target, level, keep_target=False):
+def compress(target, level, keep_target=False, exclude=None):
     """Runs compression of provided directory
 
     :param target: directory to compress
     :param level: level of compression
     :param keep_target: bool, if True target directory wont be removed
     """
+    if exclude is None:
+        exclude = []
+
     env = copy.deepcopy(os.environ)
     env['XZ_OPT'] = level
-    execute("tar cJvf {0}.tar.xz -C {1} {2}"
+    execute("tar chJvf {0}.tar.xz -C {1} {2}{3}"
             "".format(target,
                       os.path.dirname(target),
-                      os.path.basename(target)),
+                      os.path.basename(target),
+                      "".join(' --exclude {}'.format(e) for e in exclude)),
             env=env)
     if not keep_target:
         execute("rm -r {0}".format(target))
