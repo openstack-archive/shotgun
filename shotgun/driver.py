@@ -155,17 +155,23 @@ class Driver(object):
                 ):
                     logger.debug("Getting remote file: %s %s",
                                  path, target_path)
-                    utils.execute('mkdir -p "{0}"'.format(target_path))
+                    if not os.path.exists(target_path):
+                        os.makedirs(target_path)
                     try:
                         return fabric.api.get(path, target_path)
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
             else:
+                # NOTE(mkwiek): We need to use shell ln instead of os.symlink
+                # because of wildcards used in shotgun settings. ln utility
+                # will nicely handle wildcards and create all needed symlinks
+                # in target_path directory
+                symlink_command = 'ln -s "{}" "{}"'.format(path, target_path)
                 logger.debug(
-                    "Getting local file: cp -r %s %s", path, target_path)
-                utils.execute('mkdir -p "{0}"'.format(target_path))
-                return utils.execute(
-                    'cp -r "{0}" "{1}"'.format(path, target_path))
+                    "Symlinking to local file: {}".format(symlink_command))
+                if not os.path.exists(target_path):
+                    os.makedirs(target_path)
+                return utils.execute(symlink_command)
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
             raise
@@ -199,8 +205,6 @@ class File(Driver):
         """
         self.get(self.path, self.target_path)
 
-        if self.exclude:
-            utils.remove(self.full_dst_path, self.exclude)
 
 Dir = File
 
