@@ -12,8 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
 import logging
 import os
+import shutil
 
 import fabric.exceptions
 
@@ -31,23 +33,31 @@ class Manager(object):
 
     def snapshot(self):
         logger.debug("Making snapshot")
-        utils.execute("rm -rf {0}".format(os.path.dirname(self.conf.target)))
+        self.clear_target()
         excludes = []
-        for obj_data in self.conf.objects:
-            logger.debug("Dumping: %s", obj_data)
-            self.action_single(obj_data, action='snapshot')
-            if 'exclude' in obj_data:
-                excludes.extend(os.path.join(obj_data['path'], ex)
-                                for ex in obj_data['exclude'])
+        try:
+            for obj_data in self.conf.objects:
+                logger.debug("Dumping: %s", obj_data)
+                self.action_single(obj_data, action='snapshot')
+                if 'exclude' in obj_data:
+                    excludes += (os.path.join(obj_data['path'], ex)
+                                 for ex in obj_data['exclude'])
 
-        logger.debug("Dumping shotgun log and archiving dump directory: %s",
-                     self.conf.target)
-        self.action_single(self.conf.self_log_object, action='snapshot')
+            logger.debug("Dumping shotgun log "
+                         "and archiving dump directory: %s",
+                         self.conf.target)
+            self.action_single(self.conf.self_log_object, action='snapshot')
 
-        utils.compress(self.conf.target, self.conf.compression_level, excludes)
+            utils.compress(self.conf.target, self.conf.compression_level,
+                           excludes)
 
-        with open(self.conf.lastdump, "w") as fo:
-            fo.write("{0}.tar.xz".format(self.conf.target))
+            with open(self.conf.lastdump, "w") as fo:
+                fo.write("{0}.tar.xz".format(self.conf.target))
+        except IOError as e:
+            if e.errno == errno.ENOSPC:
+                self.clear_target()
+            raise
+
         return "{0}.tar.xz".format(self.conf.target)
 
     def action_single(self, object, action='snapshot'):
@@ -63,3 +73,6 @@ class Manager(object):
             logger.debug("Gathering report for: %s", obj_data)
             for report in self.action_single(obj_data, action='report'):
                 yield report
+
+    def clear_target(self):
+        shutil.rmtree(os.path.dirname(self.conf.target))
