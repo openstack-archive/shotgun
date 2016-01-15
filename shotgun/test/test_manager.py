@@ -132,3 +132,49 @@ class TestManager(base.BaseTestCase):
         mock_driver_instance.report.mock_reset()
         mock_driver_instance.snapshot.assert_called_once_with()
         self.assertFalse(mock_driver_instance.report.called)
+
+    @mock.patch('shotgun.manager.Manager.action_single')
+    @mock.patch('shotgun.manager.utils.execute')
+    def test_snapshot_rm_without_disk_space(self, mock_execute, mock_action):
+        mock_action.side_effect = IOError(28, "Not enough space")
+
+        data = {
+            "type": "file",
+            "path": "/remote_dir/remote_file",
+            "host": {
+                "address": "remote_host",
+            },
+        }
+        conf = mock.MagicMock()
+        conf.target = "/target/data"
+        conf.objects = [data]
+        conf.lastdump = tempfile.mkstemp()[1]
+        conf.self_log_object = {"type": "file", "path": "/path"}
+        manager = Manager(conf)
+        with self.assertRaises(IOError):
+            manager.snapshot()
+        calls = [mock.call('rm -rf /target') for _ in range(2)]
+        mock_execute.assert_has_calls(calls)
+
+    @mock.patch('shotgun.manager.Manager.action_single')
+    @mock.patch('shotgun.manager.utils.execute')
+    def test_snapshot_doesnt_clean_on_generic_ioerror(self, mock_execute,
+                                                      mock_action):
+        mock_action.side_effect = IOError(1, "Generic error")
+
+        data = {
+            "type": "file",
+            "path": "/remote_dir/remote_file",
+            "host": {
+                "address": "remote_host",
+            },
+        }
+        conf = mock.MagicMock()
+        conf.target = "/target/data"
+        conf.objects = [data]
+        conf.lastdump = tempfile.mkstemp()[1]
+        conf.self_log_object = {"type": "file", "path": "/path"}
+        manager = Manager(conf)
+        with self.assertRaises(IOError):
+            manager.snapshot()
+        mock_execute.assert_called_once_with('rm -rf /target')
