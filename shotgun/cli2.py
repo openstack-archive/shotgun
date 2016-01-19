@@ -76,9 +76,48 @@ class ReportCommand(Lister, Base):
         return (self.columns, data)
 
 
+class ShotgunApp(App):
+    def run(self, argv):
+        """Equivalent to the main program for the application.
+
+        This method is copied from cliff app.py with added handling of
+        EnvironmentError to make Shotgun return error codes other than 1.
+
+        :param argv: input arguments and options
+        :paramtype argv: list of str
+        """
+        try:
+            self.options, remainder = self.parser.parse_known_args(argv)
+            self.configure_logging()
+            self.interactive_mode = not remainder
+            if self.deferred_help and self.options.deferred_help and remainder:
+                self.options.deferred_help = False
+                remainder.insert(0, "help")
+                self.initialize_app(remainder)
+                self.print_help_if_requested()
+        except Exception as err:
+            if hasattr(self, 'options'):
+                debug = self.options.debug
+            else:
+                debug = True
+                if debug:
+                    self.LOG.exception(err)
+                    raise
+                else:
+                    self.LOG.error(err)
+                    # Note: This line differs from original run implementation
+                    return getattr(err, 'errno', 1)
+        result = 1
+        if self.interactive_mode:
+            result = self.interact()
+        else:
+            result = self.run_subcommand(remainder)
+            return result
+
+
 def main(argv=None):
     configure_logger()
-    return App(
+    return ShotgunApp(
         description="Shotgun CLI",
         version=shotgun.__version__,
         command_manager=CommandManager('shotgun')
