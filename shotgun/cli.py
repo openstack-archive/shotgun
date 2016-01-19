@@ -71,4 +71,8 @@ def main():
     """Entry point"""
     warnings.warn("This command is deprecated. "
                   "Please use 'shotgun2' instead", DeprecationWarning)
-    make_snapshot(parse_args())
+    try:
+        make_snapshot(parse_args())
+    except Exception as e:
+        logger.error(e)
+        return getattr(e, 'errno', 1)

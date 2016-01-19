@@ -57,6 +57,14 @@ class SnapshotCommand(Command, Base):
         snapshot_path = self.manager.snapshot()
         logger.info(u'Snapshot path: {0}'.format(snapshot_path))
 
+    def run(self, parsed_args):
+        try:
+            self.take_action(parsed_args)
+        except Exception as err:
+            logger.error(err)
+            return getattr(err, 'errno', 1)
+        return 0
+
 
 class ReportCommand(Lister, Base):
 
