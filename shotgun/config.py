@@ -46,12 +46,22 @@ class Config(object):
             time.strftime('%Y-%m-%d_%H-%M-%S', self.time)
         )
 
+    def _prepare_name(self, name):
+        if self.data.get("timestamp", settings.TIMESTAMP):
+            name = self._timestamp(name)
+        return name
+
     @property
     def target(self):
         target = self.data.get("target", settings.TARGET)
-        if self.data.get("timestamp", settings.TIMESTAMP):
-            target = self._timestamp(target)
-        return target
+        return self._prepare_name(target)
+
+    @property
+    def target_symlink(self):
+        symlink = self.data.get("target_symlink", None)
+        if symlink is None:
+            return None
+        return self._prepare_name(symlink)
 
     @property
     def compression_level(self):

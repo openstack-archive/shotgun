@@ -25,10 +25,11 @@ from shotgun.test import base
 
 class TestManager(base.BaseTestCase):
 
+    @mock.patch('os.symlink')
     @mock.patch('shotgun.manager.Driver.getDriver')
     @mock.patch('shotgun.manager.utils.execute')
     @mock.patch('shotgun.manager.utils.compress')
-    def test_snapshot(self, mcompress, mexecute, mget):
+    def test_snapshot(self, mcompress, mexecute, mget, _):
         data = {
             "type": "file",
             "path": "/remote_dir/remote_file",
@@ -46,6 +47,32 @@ class TestManager(base.BaseTestCase):
         calls = [mock.call(data, conf), mock.call(conf.self_log_object, conf)]
         mget.assert_has_calls(calls, any_order=True)
         mexecute.assert_called_once_with('rm -rf /target')
+
+    @mock.patch('os.symlink')
+    @mock.patch('shotgun.manager.Driver.getDriver')
+    @mock.patch('shotgun.manager.utils.execute')
+    @mock.patch('shotgun.manager.utils.compress')
+    def test_snapshot_symlink(self, mcompress, mexecute, mget, msymlink):
+        data = {
+            "type": "file",
+            "path": "/remote_dir/remote_file",
+            "host": {
+                "address": "remote_host",
+            },
+        }
+        conf = mock.MagicMock()
+        conf.target = "/target/data"
+        conf.target_symlink = "/target/symlink"
+        conf.objects = [data]
+        conf.lastdump = tempfile.mkstemp()[1]
+        conf.self_log_object = {"type": "file", "path": "/path"}
+        manager = Manager(conf)
+        manager.snapshot()
+        calls = [mock.call(data, conf), mock.call(conf.self_log_object, conf)]
+        mget.assert_has_calls(calls, any_order=True)
+        mexecute.assert_called_once_with('rm -rf /target')
+        msymlink.assert_called_once_with('/target/data.tar.xz',
+                                         '/target/symlink.tar.xz')
 
     @mock.patch('shotgun.manager.Driver.getDriver')
     @mock.patch('shotgun.manager.utils.execute')

@@ -50,14 +50,23 @@ class Manager(object):
             utils.compress(self.conf.target, self.conf.compression_level,
                            excludes)
 
+            archive_path = "{0}.tar.xz".format(self.conf.target)
             with open(self.conf.lastdump, "w") as fo:
-                fo.write("{0}.tar.xz".format(self.conf.target))
+                fo.write(archive_path)
+
+            if self.conf.target_symlink is not None:
+                symlink_path = "{0}.tar.xz".format(self.conf.target_symlink)
+                logger.debug(("target_symlink found, creating a symlink {} -> "
+                              "{}").format(archive_path, symlink_path))
+                os.symlink(archive_path, symlink_path)
+                archive_path = symlink_path
+
         except IOError as e:
             if e.errno == errno.ENOSPC:
                 self.clear_target()
             raise e
 
-        return "{0}.tar.xz".format(self.conf.target)
+        return archive_path
 
     def action_single(self, object, action='snapshot'):
         driver = Driver.getDriver(object, self.conf)
