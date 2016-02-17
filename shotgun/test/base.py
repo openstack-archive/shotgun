@@ -12,8 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest2.case import TestCase
+from oslotest import base as oslo_base
 
 
-class BaseTestCase(TestCase):
+class BaseTestCase(oslo_base.BaseTestCase):
     """Base unit test case for shotgun tests."""
