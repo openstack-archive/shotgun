@@ -1,4 +1,10 @@
-mock==1.3.0
-unittest2==1.1.0
+# The order of packages is significant, because pip processes them in the order
+# of appearance. Changing the order has an impact on the overall integration
+# process, which may cause wedges in the gate later.
+mock>=1.2
+unittest2
+
+# Packages beyond this line are not in Global Requirements list
+# and must be added there.
 pytest==2.8.0
 pytest-cov==2.1.0
