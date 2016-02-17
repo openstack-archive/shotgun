@@ -1,10 +1,8 @@
 # The order of packages is significant, because pip processes them in the order
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
+hacking<0.11,>=0.10.2
+coverage>=3.6
+os-testr>=0.1.0
+oslotest>=1.10.0 # Apache-2.0
 mock>=1.2
-unittest2
-
-# Packages beyond this line are not in Global Requirements list
-# and must be added there.
-pytest==2.8.0
-pytest-cov==2.1.0
