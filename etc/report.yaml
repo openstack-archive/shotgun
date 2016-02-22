@@ -11,6 +11,6 @@ dump:
         rpm -qa | \
         egrep 'fuel|astute|network-checker|shotgun' | \
         while read package; do
-          echo $package
+          echo \\n$package
           rpm -q --changelog $package | head -2
         done
