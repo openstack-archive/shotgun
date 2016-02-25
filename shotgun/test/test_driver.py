@@ -49,7 +49,8 @@ class TestDriver(base.BaseTestCase):
     @mock.patch('shotgun.driver.utils.CCStringIO')
     @mock.patch('shotgun.driver.fabric.api.settings')
     @mock.patch('shotgun.driver.fabric.api.run')
-    def test_driver_remote_command(self, mfabrun, mfabset, mccstring):
+    def test_driver_remote_command(self, mfabrun, mfabset,
+                                   mccstring):
         out = shotgun.driver.CommandOut()
         out.stdout = "STDOUT"
         out.return_code = "RETURN_CODE"
@@ -64,6 +65,7 @@ class TestDriver(base.BaseTestCase):
         conf = mock.Mock()
         driver = shotgun.driver.Driver({
             "host": {
+                "ssh-user": "root",
                 "hostname": "remote_host",
                 "address": "10.109.0.2"
             }
@@ -73,6 +75,46 @@ class TestDriver(base.BaseTestCase):
         mfabrun.assert_called_with(
             command, stdout=mock.ANY)
         mfabset.assert_called_with(
+            user="root",
+            host_string="10.109.0.2",
+            timeout=2,
+            command_timeout=driver.timeout,
+            warn_only=True,
+            key_filename=None,
+            abort_on_prompts=True,
+            use_shell=True)
+        self.assertEqual(result, out)
+
+    @mock.patch('shotgun.driver.utils.CCStringIO')
+    @mock.patch('shotgun.driver.fabric.api.settings')
+    @mock.patch('shotgun.driver.fabric.api.sudo')
+    def test_driver_remote_command_nonroot(self, mfabsudo, mfabset,
+                                           mccstring):
+        out = shotgun.driver.CommandOut()
+        out.stdout = "STDOUT"
+        out.return_code = "RETURN_CODE"
+        mccstring.return_value.getvalue.return_value = out.stdout
+
+        runout = RunOut()
+        runout.return_code = "RETURN_CODE"
+        mfabsudo.return_value = runout
+
+        command = "COMMAND"
+
+        conf = mock.Mock()
+        driver = shotgun.driver.Driver({
+            "host": {
+                "ssh-user": "fuel",
+                "hostname": "remote_host",
+                "address": "10.109.0.2"
+            }
+        }, conf)
+        result = driver.command(command)
+
+        mfabsudo.assert_called_with(
+            command, stdout=mock.ANY)
+        mfabset.assert_called_with(
+            user="fuel",
             host_string="10.109.0.2",
             timeout=2,
             command_timeout=driver.timeout,
@@ -96,6 +138,7 @@ class TestDriver(base.BaseTestCase):
         driver.timeout = timeout
         driver.command("COMMAND")
         mfabset.assert_called_with(
+            user=mock.ANY,
             host_string=mock.ANY,
             timeout=mock.ANY,
             command_timeout=timeout,
@@ -123,9 +166,9 @@ class TestDriver(base.BaseTestCase):
 
     @mock.patch('shotgun.driver.utils.CCStringIO')
     @mock.patch('shotgun.driver.fabric.api.settings')
-    @mock.patch('shotgun.driver.fabric.api.run')
-    def test_command_timeout(self, mfabrun, mfabset, mstringio):
-        mfabrun.side_effect = fabric.exceptions.CommandTimeout(10)
+    @mock.patch('shotgun.driver.fabric.api.sudo')
+    def test_command_timeout(self, mfabsudo, mfabset, mstringio):
+        mfabsudo.side_effect = fabric.exceptions.CommandTimeout(10)
 
         mstdout = mock.MagicMock()
         mstdout.getvalue.return_value = 'FULL STDOUT'
@@ -136,6 +179,7 @@ class TestDriver(base.BaseTestCase):
         conf = mock.Mock()
         driver = shotgun.driver.Driver({
             "host": {
+                "ssh-user": "fuel",
                 "hostname": "remote_host",
                 "address": "10.109.0.2"
             }
@@ -145,7 +189,7 @@ class TestDriver(base.BaseTestCase):
         mstringio.assert_has_calls([
             mock.call(writers=sys.stdout),
         ])
-        mfabrun.assert_called_with(command, stdout=mstdout)
+        mfabsudo.assert_called_with(command, stdout=mstdout)
         self.assertEqual(result.stdout, 'FULL STDOUT')
 
     @mock.patch('os.path.exists', return_value=False)
@@ -164,15 +208,56 @@ class TestDriver(base.BaseTestCase):
                 "hostname": "remote_host",
                 "address": "10.109.0.2",
                 "ssh-key": "path_to_key",
+                "ssh-user": "root",
             },
         }, conf)
         driver.get(remote_path, target_path)
         mmakedirs.assert_called_once_with(target_path)
-        mfabget.assert_called_with(remote_path, target_path)
+        mfabget.assert_called_with(remote_path, target_path,
+                                   use_sudo=False)
 
         mfabset.assert_called_with(
             host_string="10.109.0.2", key_filename="path_to_key",
-            timeout=2, warn_only=True, abort_on_prompts=True)
+            timeout=2, warn_only=True, abort_on_prompts=True,
+            user="root")
+
+        mexecute.reset_mock()
+        mmakedirs.reset_mock()
+        driver = shotgun.driver.Driver({}, conf)
+        driver.get(remote_path, target_path)
+        mmakedirs.assert_called_once_with(target_path)
+        mexecute.assert_called_with('ln -s "{}" "{}"'.format(remote_path,
+                                                             target_path))
+
+    @mock.patch('os.path.exists', return_value=False)
+    @mock.patch('os.makedirs')
+    @mock.patch('shotgun.utils.execute')
+    @mock.patch('shotgun.driver.fabric.api.settings')
+    @mock.patch('shotgun.driver.fabric.api.get')
+    def test_driver_get_nonroot(self, mfabget, mfabset, mexecute,
+                                mmakedirs, _):
+        mexecute.return_value = ("RETURN_CODE", "STDOUT", "STDERR")
+        remote_path = "/remote_dir/remote_file"
+        target_path = "/target_dir"
+        conf = mock.Mock()
+
+        driver = shotgun.driver.Driver({
+            "host": {
+                "hostname": "remote_host",
+                "address": "10.109.0.2",
+                "ssh-key": "path_to_key",
+                "ssh-user": "fuel",
+            },
+        }, conf)
+        driver.get(remote_path, target_path)
+        mmakedirs.assert_called_once_with(target_path)
+        mfabget.assert_called_with(remote_path, target_path,
+                                   use_sudo=True)
+
+        mfabset.assert_called_with(
+            host_string="10.109.0.2", key_filename="path_to_key",
+            timeout=2, warn_only=True, abort_on_prompts=True,
+            user="fuel")
 
         mexecute.reset_mock()
         mmakedirs.reset_mock()
