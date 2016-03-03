@@ -13,5 +13,5 @@ dump:
         while read package; do
           echo
           echo $package
-          rpm -q --changelog $package | head -2
+          rpm -q --changelog $package | head -{0}
         done

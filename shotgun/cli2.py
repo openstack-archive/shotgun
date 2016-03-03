@@ -76,11 +76,17 @@ class ReportCommand(Lister, Base):
             '--config',
             default='/etc/shotgun/report.yaml',
             help='Path to report config file')
+        parser.add_argument(
+            'lines',
+            action='store',
+            nargs='?',
+            default=3,
+            help='Package info lines to show. If not set, default=3 is used')
         return parser
 
     def take_action(self, parsed_args):
         self.initialize_cmd(parsed_args)
-        data = [line for line in self.manager.report()]
+        data = [line for line in self.manager.report(parsed_args)]
         return (self.columns, data)
 
 
