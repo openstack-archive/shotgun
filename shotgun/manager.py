@@ -69,9 +69,11 @@ class Manager(object):
         except fabric.exceptions.NetworkError:
             self.conf.on_network_error(object)
 
-    def report(self):
+    def report(self, parsed_args):
         logger.debug("Making report")
         for obj_data in self.conf.objects:
+            obj_data['command'][-1] = obj_data['command'][-1].format(
+                int(parsed_args.lines)-1)
             logger.debug("Gathering report for: %s", obj_data)
             for report in self.action_single(obj_data, action='report'):
                 yield report
