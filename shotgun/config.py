@@ -22,10 +22,9 @@ import six
 from shotgun import settings
 
 
-logger = logging.getLogger(__name__)
-
-
 class Config(object):
+    log = logging.getLogger(__name__)
+
     def __init__(self, data=None):
         self.data = data or {}
         self.time = time.localtime()
@@ -57,7 +56,7 @@ class Config(object):
     def compression_level(self):
         level = self.data.get("compression_level")
         if level is None:
-            logger.info(
+            self.log.info(
                 'Compression level is not specified,'
                 ' Default %s will be used', settings.COMPRESSION_LEVEL)
 
@@ -77,8 +76,8 @@ class Config(object):
     def on_network_error(self, obj):
         """Lets the object to have another attempt for being proccessed."""
         host = self.get_network_address(obj)
-        logger.debug("Remote host %s is unreachable. "
-                     "Processing of its objects postponed.", host)
+        self.log.debug("Remote host %s is unreachable. "
+                       "Processing of its objects postponed.", host)
         self.try_again.append(obj)
         self.offline_hosts.add(host)
 
@@ -106,7 +105,7 @@ class Config(object):
                 self.offline_hosts.add(host)
                 yield obj
             else:
-                logger.debug("Skipping offline object processing: %s", obj)
+                self.log.debug("Skipping offline object processing: %s", obj)
 
     @property
     def timeout(self):

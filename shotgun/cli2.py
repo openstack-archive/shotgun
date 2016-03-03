@@ -13,8 +13,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 import logging
+import re
 import yaml
 
 from cliff.app import App
@@ -24,14 +24,12 @@ from cliff.lister import Lister
 
 import shotgun
 from shotgun.config import Config
-from shotgun.logger import configure_logger
 from shotgun.manager import Manager
 
 
-logger = logging.getLogger(__name__)
-
-
 class Base(object):
+    log = logging.getLogger(__name__)
+
     def initialize_cmd(self, parsed_args):
         with open(parsed_args.config, "r") as f:
             self.config = Config(yaml.safe_load(f))
@@ -55,20 +53,20 @@ class SnapshotCommand(Command, Base):
         """
         self.initialize_cmd(parsed_args)
         snapshot_path = self.manager.snapshot()
-        logger.info(u'Snapshot path: {0}'.format(snapshot_path))
+        self.log.info(u'Snapshot path: {0}'.format(snapshot_path))
 
     def run(self, parsed_args):
         """Overriden for returning errno from exceptions"""
         try:
             return super(SnapshotCommand, self).run(parsed_args)
         except Exception as err:
-            logger.error(err)
+            self.log.error(err)
             return getattr(err, 'errno', 1)
 
 
 class ReportCommand(Lister, Base):
-
-    columns = ['Host', 'Reporter', 'Report']
+    columns = ['Info']
+    formatter_default = 'value'
 
     def get_parser(self, prog_name):
         parser = super(ReportCommand, self).get_parser(prog_name)
@@ -76,16 +74,28 @@ class ReportCommand(Lister, Base):
             '--config',
             default='/etc/shotgun/report.yaml',
             help='Path to report config file')
+        parser.add_argument(
+            '--short', '-s',
+            action='store_true',
+            default=False,
+            help='Shows only package name, without git log')
         return parser
 
     def take_action(self, parsed_args):
         self.initialize_cmd(parsed_args)
-        data = [line for line in self.manager.report()]
-        return (self.columns, data)
+        raw = self.manager.report()
+        data = [line[2:3] for line in raw]
+        if parsed_args.short:
+            def _package_name(x):
+                regexp = re.compile(
+                    r'^(?!\-|\*).*(fuel|astute|network-checker|shotgun).*')
+                return regexp.search(x[0])
+            data = filter(_package_name, data)
+            data.insert(4, ('',))
+        return self.columns, data
 
 
 def main(argv=None):
-    configure_logger()
     return App(
         description="Shotgun CLI",
         version=shotgun.__version__,
