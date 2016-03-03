@@ -96,7 +96,8 @@ class TestManager(base.BaseTestCase):
 
     @mock.patch('shotgun.manager.Manager.action_single')
     def test_report(self, mock_action):
-        objs = ["o1", "o2"]
+        objs = [{"command": ["command1", "command2"]},
+                {"command": ["command1", "command2"]}]
         mock_action.side_effect = [["r1", "r2"], ["r3"]]
         conf = mock.Mock()
         conf.objects = objs
@@ -108,8 +109,8 @@ class TestManager(base.BaseTestCase):
         self.assertEqual(["r1", "r2", "r3"], reports)
 
         expected_calls = [
-            mock.call('o1', action='report'),
-            mock.call('o2', action='report')]
+            mock.call({"command": ["command1", "command2"]}, action='report'),
+            mock.call({"command": ["command1", "command2"]}, action='report')]
         self.assertEqual(expected_calls, mock_action.call_args_list)
 
     @mock.patch('shotgun.manager.Driver')
