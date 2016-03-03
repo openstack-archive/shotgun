@@ -27,8 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 class Manager(object):
+    log = logging.getLogger(__name__)
+
     def __init__(self, conf):
-        logger.debug("Initializing snapshot manager")
+        self.log.debug("Initializing snapshot manager")
         self.conf = conf
 
     def snapshot(self):
@@ -69,17 +71,19 @@ class Manager(object):
         except fabric.exceptions.NetworkError:
             self.conf.on_network_error(object)
 
-    def report(self):
-        logger.debug("Making report")
+    def report(self, parsed_args):
+        self.log.debug("Making report")
         for obj_data in self.conf.objects:
-            logger.debug("Gathering report for: %s", obj_data)
+            obj_data['command'][-1] = obj_data['command'][-1].format(
+                int(parsed_args.lines) - 1)
+            self.log.debug("Gathering report for: %s", obj_data)
             for report in self.action_single(obj_data, action='report'):
                 yield report
 
     def clear_target(self):
         def on_rmtree_error(function, path, excinfo):
             msg = "Clearing target failed. function: {}, path: {}, excinfo: {}"
-            logger.error(msg.format(function, path, excinfo))
+            self.log.error(msg.format(function, path, excinfo))
 
         shutil.rmtree(os.path.dirname(self.conf.target),
                       onerror=on_rmtree_error)

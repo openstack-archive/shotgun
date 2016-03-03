@@ -3,15 +3,15 @@ dump:
     objects:
     - type: command
       command:
-      - cat /etc/fuel_build_id
-      - cat /etc/fuel_build_number
-      - cat /etc/fuel_release
-      - cat /etc/fuel_openstack_version
+      - echo fuel_build_id:$(cat /etc/fuel_build_id)
+      - echo fuel_build_number:$(cat /etc/fuel_build_number)
+      - echo fuel_release:$(cat /etc/fuel_release)
+      - echo fuel_os_vesion:$(cat /etc/fuel_openstack_version)
       - |
         rpm -qa | \
         egrep 'fuel|astute|network-checker|shotgun' | \
         while read package; do
           echo
           echo $package
-          rpm -q --changelog $package | head -2
+          rpm -q --changelog $package | head -{0}
         done
