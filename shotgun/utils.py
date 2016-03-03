@@ -126,7 +126,6 @@ class CCStringIO(StringIO):
         # too so we won't have encoding mess in the output file).
         if isinstance(s, unicode):
             s = s.encode('utf-8')
-
         StringIO.write(self, s)
         for writer in self.writers:
             writer.write(s)

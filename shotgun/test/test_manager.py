@@ -100,10 +100,12 @@ class TestManager(base.BaseTestCase):
         mock_action.side_effect = [["r1", "r2"], ["r3"]]
         conf = mock.Mock()
         conf.objects = objs
+        parsed_args = mock.Mock()
+        parsed_args.lines = '1'
         manager = Manager(conf)
         manager.action_single = mock_action
         reports = []
-        for rep in manager.report():
+        for rep in manager.report(parsed_args=parsed_args):
             reports.append(rep)
         self.assertEqual(["r1", "r2", "r3"], reports)
 
