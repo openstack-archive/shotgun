@@ -62,12 +62,12 @@ class Manager(object):
 
         return "{0}.tar.xz".format(self.conf.target)
 
-    def action_single(self, object, action='snapshot'):
-        driver = Driver.getDriver(object, self.conf)
+    def action_single(self, obj, action='snapshot'):
+        driver = Driver.getDriver(obj, self.conf)
         try:
             return getattr(driver, action)()
         except fabric.exceptions.NetworkError:
-            self.conf.on_network_error(object)
+            self.conf.on_network_error(obj)
 
     def report(self):
         logger.debug("Making report")
