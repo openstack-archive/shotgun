@@ -48,6 +48,7 @@ class CommandOut(object):
 
 
 class Driver(object):
+    log = logging.getLogger(__name__)
 
     default_report_message = 'Reporting is not implemented for the driver.'
 
@@ -65,7 +66,7 @@ class Driver(object):
         }.get(driver_type, cls)(data, conf)
 
     def __init__(self, data, conf):
-        logger.debug("Initializing driver %s: host=%s",
+        self.log.debug("Initializing driver %s: host=%s",
                      self.__class__.__name__, data.get("host"))
 
         data_host = data.get("host", {})
@@ -112,13 +113,13 @@ class Driver(object):
                     abort_on_prompts=True,         # non-interactive mode
                     use_shell=True,
                 ):
-                    logger.debug(
+                    self.log.debug(
                         "Running remote command: host: %s command: %s",
                         self.host, command)
                     try:
                         output = fabric.api.run(command, stdout=raw_stdout)
                     except SystemExit:
-                        logger.error("Fabric aborted this iteration")
+                        self.log.error("Fabric aborted this iteration")
                     # NOTE(prmtl): because of pty=True (default) and
                     # combine_stderr=True (default) stderr is combined
                     # with stdout
@@ -126,15 +127,15 @@ class Driver(object):
                     out.stdout = raw_stdout.getvalue()
                     out.return_code = output.return_code
             else:
-                logger.debug("Running local command: %s", command)
+                self.log.debug("Running local command: %s", command)
                 out.return_code, out.stdout, out.stderr = utils.execute(
                     command)
                 out.output = out.stdout
         except fabric.exceptions.NetworkError as e:
-            logger.error("NetworkError occured: %s", str(e))
+            self.log.error("NetworkError occured: %s", str(e))
             raise
         except Exception as e:
-            logger.error("Unexpected error occured: %s", str(e))
+            self.log.error("Unexpected error occured: %s", str(e))
             out.stdout = raw_stdout.getvalue()
         return out
 
@@ -155,26 +156,26 @@ class Driver(object):
                     warn_only=True,               # don't exit on error
                     abort_on_prompts=True,        # non-interactive mode
                 ):
-                    logger.debug("Getting remote file: %s %s",
+                    self.log.debug("Getting remote file: %s %s",
                                  path, target_path)
                     try:
                         return fabric.api.get(path, target_path)
                     except SystemExit:
-                        logger.error("Fabric aborted this iteration")
+                        self.log.error("Fabric aborted this iteration")
             else:
                 # NOTE(mkwiek): We need to use shell ln instead of os.symlink
                 # because of wildcards used in shotgun settings. ln utility
                 # will nicely handle wildcards and create all needed symlinks
                 # in target_path directory
                 symlink_command = 'ln -s "{}" "{}"'.format(path, target_path)
-                logger.debug(
+                self.log.debug(
                     "Symlinking to local file: {}".format(symlink_command))
                 return utils.execute(symlink_command)
         except fabric.exceptions.NetworkError as e:
-            logger.error("NetworkError occured: %s", str(e))
+            self.log.error("NetworkError occured: %s", str(e))
             raise
         except Exception as e:
-            logger.error("Unexpected error occured: %s", str(e))
+            self.log.error("Unexpected error occured: %s", str(e))
 
 
 class File(Driver):
@@ -183,14 +184,14 @@ class File(Driver):
         super(File, self).__init__(data, conf)
         self.path = data["path"]
         self.exclude = data.get('exclude', [])
-        logger.debug("File to get: %s", self.path)
+        self.log.debug("File to get: %s", self.path)
         self.target_path = str(os.path.join(
             self.conf.target, self.host,
             os.path.dirname(self.path).lstrip("/")))
         self.full_dst_path = os.path.join(
             self.conf.target, self.host,
             self.path.lstrip("/"))
-        logger.debug("File to save: %s", self.target_path)
+        self.log.debug("File to save: %s", self.target_path)
 
     def snapshot(self):
         """Make a snapshot

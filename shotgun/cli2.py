@@ -39,6 +39,7 @@ class Base(object):
 
 
 class SnapshotCommand(Command, Base):
+    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(SnapshotCommand, self).get_parser(prog_name)
@@ -55,20 +56,20 @@ class SnapshotCommand(Command, Base):
         """
         self.initialize_cmd(parsed_args)
         snapshot_path = self.manager.snapshot()
-        logger.info(u'Snapshot path: {0}'.format(snapshot_path))
+        self.log.info(u'Snapshot path: {0}'.format(snapshot_path))
 
     def run(self, parsed_args):
         """Overriden for returning errno from exceptions"""
         try:
             return super(SnapshotCommand, self).run(parsed_args)
         except Exception as err:
-            logger.error(err)
+            self.log.error(err)
             return getattr(err, 'errno', 1)
 
 
 class ReportCommand(Lister, Base):
-
-    columns = ['Host', 'Reporter', 'Report']
+    columns = ['Info']
+    formatter_default = 'value'
 
     def get_parser(self, prog_name):
         parser = super(ReportCommand, self).get_parser(prog_name)
@@ -76,16 +77,23 @@ class ReportCommand(Lister, Base):
             '--config',
             default='/etc/shotgun/report.yaml',
             help='Path to report config file')
+        parser.add_argument(
+            'lines',
+            action='store',
+            nargs='?',
+            default=1,
+            help='Package info lines to show. If not set, default=1 is used')
         return parser
 
     def take_action(self, parsed_args):
         self.initialize_cmd(parsed_args)
-        data = [line for line in self.manager.report()]
-        return (self.columns, data)
+        raw = self.manager.report(parsed_args)
+        data = [line[2:3] for line in raw]
+        return self.columns, data
 
 
 def main(argv=None):
-    configure_logger()
+    #configure_logger()
     return App(
         description="Shotgun CLI",
         version=shotgun.__version__,
