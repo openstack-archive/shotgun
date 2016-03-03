@@ -68,7 +68,7 @@ class SnapshotCommand(Command, Base):
 
 class ReportCommand(Lister, Base):
 
-    columns = ['Host', 'Reporter', 'Report']
+    formatter_default = 'value'
 
     def get_parser(self, prog_name):
         parser = super(ReportCommand, self).get_parser(prog_name)
@@ -76,12 +76,18 @@ class ReportCommand(Lister, Base):
             '--config',
             default='/etc/shotgun/report.yaml',
             help='Path to report config file')
+        parser.add_argument(
+            'lines',
+            action='store',
+            nargs='?',
+            default=3,
+            help='Package info lines to show. If not set, default=3 is used')
         return parser
 
     def take_action(self, parsed_args):
         self.initialize_cmd(parsed_args)
-        data = [line for line in self.manager.report()]
-        return (self.columns, data)
+        data = [line[2:3] for line in self.manager.report(parsed_args)]
+        return self.columns, data
 
 
 def main(argv=None):
