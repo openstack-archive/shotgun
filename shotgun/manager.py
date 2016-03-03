@@ -23,29 +23,28 @@ from shotgun.driver import Driver
 from shotgun import utils
 
 
-logger = logging.getLogger(__name__)
-
-
 class Manager(object):
+    log = logging.getLogger(__name__)
+
     def __init__(self, conf):
-        logger.debug("Initializing snapshot manager")
+        self.log.debug("Initializing snapshot manager")
         self.conf = conf
 
     def snapshot(self):
-        logger.debug("Making snapshot")
+        self.log.debug("Making snapshot")
         self.clear_target()
         excludes = []
         try:
             for obj_data in self.conf.objects:
-                logger.debug("Dumping: %s", obj_data)
+                self.log.debug("Dumping: %s", obj_data)
                 self.action_single(obj_data, action='snapshot')
                 if 'exclude' in obj_data:
                     excludes += (os.path.join(obj_data['path'], ex)
                                  for ex in obj_data['exclude'])
 
-            logger.debug("Dumping shotgun log "
-                         "and archiving dump directory: %s",
-                         self.conf.target)
+            self.log.debug("Dumping shotgun log "
+                           "and archiving dump directory: %s",
+                           self.conf.target)
             self.action_single(self.conf.self_log_object, action='snapshot')
 
             utils.compress(self.conf.target, self.conf.compression_level,
@@ -55,31 +54,31 @@ class Manager(object):
                 fo.write("{0}.tar.xz".format(self.conf.target))
         except IOError as e:
             if e.errno == errno.ENOSPC:
-                logger.error("Not enough space in "
-                             "{} for snapshot".format(self.conf.target))
+                self.log.error("Not enough space in "
+                               "{} for snapshot".format(self.conf.target))
                 self.clear_target()
             raise
 
         return "{0}.tar.xz".format(self.conf.target)
 
-    def action_single(self, object, action='snapshot'):
-        driver = Driver.getDriver(object, self.conf)
+    def action_single(self, obj, action='snapshot'):
+        driver = Driver.getDriver(obj, self.conf)
         try:
             return getattr(driver, action)()
         except fabric.exceptions.NetworkError:
-            self.conf.on_network_error(object)
+            self.conf.on_network_error(obj)
 
     def report(self):
-        logger.debug("Making report")
+        self.log.debug("Making report")
         for obj_data in self.conf.objects:
-            logger.debug("Gathering report for: %s", obj_data)
+            self.log.debug("Gathering report for: %s", obj_data)
             for report in self.action_single(obj_data, action='report'):
                 yield report
 
     def clear_target(self):
         def on_rmtree_error(function, path, excinfo):
             msg = "Clearing target failed. function: {}, path: {}, excinfo: {}"
-            logger.error(msg.format(function, path, excinfo))
+            self.log.error(msg.format(function, path, excinfo))
 
         shutil.rmtree(os.path.dirname(self.conf.target),
                       onerror=on_rmtree_error)
