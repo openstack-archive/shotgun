@@ -1,0 +1,8 @@
+Code-Review+2: Igor Kalnitsky <ikalnitsky@mirantis.com>
+Workflow+1: Igor Kalnitsky <ikalnitsky@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 10 Mar 2016 16:45:10 +0000
+Reviewed-on: https://review.openstack.org/291289
+Project: openstack/shotgun
+Branch: refs/heads/master
