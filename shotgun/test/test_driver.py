@@ -258,8 +258,6 @@ class TestFile(base.BaseTestCase):
 
 class TestCommand(base.BaseTestCase):
     def setUp(self):
-        super(TestCommand, self).setUp()
-
         self.conf = mock.Mock()
         self.conf.target = '/some/dir'
 
@@ -352,8 +350,6 @@ class TestCommand(base.BaseTestCase):
 
 class TestDockerCommand(base.BaseTestCase):
     def setUp(self):
-        super(TestDockerCommand, self).setUp()
-
         self.conf = mock.Mock()
         self.conf.target = '/some/dir'
 
