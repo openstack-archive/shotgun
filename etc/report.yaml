@@ -9,9 +9,9 @@ dump:
       - cat /etc/fuel_openstack_version
       - |
         rpm -qa | \
-        egrep 'fuel|astute|network-checker|shotgun' | \
+        egrep 'fuel|astute|network-checker|nailgun|packetary|shotgun' | \
         while read package; do
           echo
           echo $package
-          rpm -q --changelog $package | head -2
+          rpm -q --changelog $package | head -10
         done
