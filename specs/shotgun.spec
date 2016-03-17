@@ -38,6 +38,7 @@ cd %{_builddir}/%{name}-%{version} && python setup.py build
 cd %{_builddir}/%{name}-%{version} && python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=%{_builddir}/%{name}-%{version}/INSTALLED_FILES
 install -d -m 755 %{buildroot}%{_sysconfdir}/shotgun
 install -p -D -m 644 %{_builddir}/%{name}-%{version}/etc/report.yaml  %{buildroot}%{_sysconfdir}/shotgun/report.yaml
+install -p -D -m 644 %{_builddir}/%{name}-%{version}/etc/short_report.yaml  %{buildroot}%{_sysconfdir}/shotgun/short_report.yaml
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -45,3 +46,4 @@ rm -rf $RPM_BUILD_ROOT
 %files -f  %{_builddir}/%{name}-%{version}/INSTALLED_FILES
 %defattr(-,root,root)
 %{_sysconfdir}/shotgun/report.yaml
+%{_sysconfdir}/shotgun/short_report.yaml
