@@ -7,4 +7,5 @@ dump:
       - cat /etc/fuel_build_number
       - cat /etc/fuel_release
       - cat /etc/fuel_openstack_version
-      - rpm -qa | egrep 'fuel|astute|network-checker|shotgun'
+      - rpm -qa | egrep 'fuel|astute|network-checker|shotgun' | while read package; do echo $package $(rpm -q --changelog $package | awk 'NR==2{print}'); done
+
