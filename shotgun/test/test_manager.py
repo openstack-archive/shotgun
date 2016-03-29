@@ -151,8 +151,8 @@ class TestManager(base.BaseTestCase):
         conf.lastdump = tempfile.mkstemp()[1]
         conf.self_log_object = {"type": "file", "path": "/path"}
         manager = Manager(conf)
-        with self.assertRaises(IOError):
-            manager.snapshot()
+
+        self.assertRaises(IOError, manager.snapshot)
         calls = [mock.call('/target', onerror=mock.ANY) for _ in range(2)]
         mrmtree.assert_has_calls(calls)
 
@@ -175,6 +175,6 @@ class TestManager(base.BaseTestCase):
         conf.lastdump = tempfile.mkstemp()[1]
         conf.self_log_object = {"type": "file", "path": "/path"}
         manager = Manager(conf)
-        with self.assertRaises(IOError):
-            manager.snapshot()
+
+        self.assertRaises(IOError, manager.snapshot)
         mrmtree.assert_called_once_with('/target', onerror=mock.ANY)
