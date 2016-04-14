@@ -12,7 +12,8 @@ License: Apache
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 Prefix: %{_prefix}
-BuildArch: noarch
+BuildRequires: python-setuptools
+BuildRequires: python-pbr >= 1.8
 Requires:    postgresql
 Requires:    python-cliff >= 1.7.0
 Requires:    python-fabric >= 1.10.0
@@ -23,7 +24,7 @@ Requires:    gzip
 Requires:    bzip2
 Requires:    openssh-clients
 Requires:    xz
-BuildRequires: python-setuptools
+BuildArch: noarch
 
 %description
 Shotgun package.
