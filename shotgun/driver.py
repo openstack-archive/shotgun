@@ -129,6 +129,7 @@ class Driver(object):
                 logger.debug("Running local command: %s", command)
                 out.return_code, out.stdout, out.stderr = utils.execute(
                     command)
+                out.stdout = out.stdout.decode('utf-8')
                 out.output = out.stdout
         except fabric.exceptions.NetworkError as e:
             logger.error("NetworkError occured: %s", str(e))
