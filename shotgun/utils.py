@@ -70,11 +70,11 @@ def compress(target, level, keep_target=False, exclude=None):
 
     env = copy.deepcopy(os.environ)
     env['XZ_OPT'] = level
-    execute("tar chJvf {0}.tar.xz -C {1} {2}{3}"
+    execute("tar chzvf {0}.tar.gz -C {1} {2} {3}"
             "".format(target,
                       os.path.dirname(target),
                       os.path.basename(target),
-                      "".join(' --exclude {}'.format(e) for e in exclude)),
+                      " ".join('--exclude={}'.format(e) for e in exclude)),
             env=env)
     if not keep_target:
         execute("rm -r {0}".format(target))
