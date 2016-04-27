@@ -40,7 +40,7 @@ class Manager(object):
                 logger.debug("Dumping: %s", obj_data)
                 self.action_single(obj_data, action='snapshot')
                 if 'exclude' in obj_data:
-                    excludes += (os.path.join(obj_data['path'], ex)
+                    excludes += (os.path.join(obj_data['path'], ex).lstrip('/')
                                  for ex in obj_data['exclude'])
 
             logger.debug("Dumping shotgun log "
@@ -49,10 +49,10 @@ class Manager(object):
             self.action_single(self.conf.self_log_object, action='snapshot')
 
             utils.compress(self.conf.target, self.conf.compression_level,
-                           excludes)
+                           exclude=excludes)
 
             with open(self.conf.lastdump, "w") as fo:
-                fo.write("{0}.tar.xz".format(self.conf.target))
+                fo.write("{0}.tar.gz".format(self.conf.target))
         except IOError as e:
             if e.errno == errno.ENOSPC:
                 logger.error("Not enough space in "
@@ -60,7 +60,7 @@ class Manager(object):
                 self.clear_target()
             raise
 
-        return "{0}.tar.xz".format(self.conf.target)
+        return "{0}.tar.gz".format(self.conf.target)
 
     def action_single(self, obj, action='snapshot'):
         driver = Driver.getDriver(obj, self.conf)

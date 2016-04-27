@@ -58,7 +58,7 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(compress_env['XZ_OPT'], level)
         self.assertEqual(
             compress_call[0][0],
-            'tar chJvf /path/target.tar.xz -C /path target')
+            'tar chzvf /path/target.tar.gz -C /path target')
 
         self.assertEqual(rm_call[0][0], 'rm -r /path/target')
 
@@ -77,8 +77,8 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(compress_env['XZ_OPT'], level)
         self.assertEqual(
             compress_call[0][0],
-            'tar chJvf /path/target.tar.xz -C /path target '
-            '--exclude /path/to/exclude1 --exclude /path/to/exclude2')
+            'tar chzvf /path/target.tar.gz -C /path target '
+            '--exclude=/path/to/exclude1 --exclude=/path/to/exclude2')
 
 
 class TestCCStringIO(base.BaseTestCase):
