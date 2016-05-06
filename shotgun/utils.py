@@ -13,6 +13,7 @@
 #    under the License.
 
 import copy
+import errno
 import logging
 import os
 import re
@@ -58,6 +59,14 @@ def remove(full_dst_path, excludes):
         execute("shopt -s globstar; rm -rf {0}".format(path))
 
 
+def is_out_of_space(code, errdata):
+    if code:
+        # Since compression command is actually a pipeline
+        # we cannot use return code to detect out of space condition
+        # so, the only way is to parse stderr
+        return errdata.lower().find('no space left'.encode()) >= 0
+
+
 def compress(target, level, keep_target=False, exclude=None):
     """Runs compression of provided directory
 
@@ -70,14 +79,18 @@ def compress(target, level, keep_target=False, exclude=None):
 
     env = copy.deepcopy(os.environ)
     env['XZ_OPT'] = level
-    execute("tar chJvf {0}.tar.xz -C {1} {2}{3}"
-            "".format(target,
-                      os.path.dirname(target),
-                      os.path.basename(target),
-                      "".join(' --exclude {}'.format(e) for e in exclude)),
-            env=env)
+    env['LANG'] = 'C'  # We need non localized output
+    code, _, errdata = execute(
+        "tar chJf {0}.tar.xz -C {1} {2}{3}"
+        "".format(target,
+                  os.path.dirname(target),
+                  os.path.basename(target),
+                  "".join(' --exclude={}'.format(e) for e in exclude)),
+        env=env)
     if not keep_target:
         execute("rm -r {0}".format(target))
+    if is_out_of_space(code, errdata):
+        raise IOError(errno.ENOSPC)
 
 
 def execute(command, env=None):
