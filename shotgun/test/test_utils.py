@@ -78,7 +78,7 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(
             compress_call[0][0],
             'tar chJvf /path/target.tar.xz -C /path target '
-            '--exclude /path/to/exclude1 --exclude /path/to/exclude2')
+            '--exclude=/path/to/exclude1 --exclude=/path/to/exclude2')
 
 
 class TestCCStringIO(base.BaseTestCase):

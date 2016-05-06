@@ -34,14 +34,14 @@ class Manager(object):
     def snapshot(self):
         logger.debug("Making snapshot")
         self.clear_target()
-        excludes = []
+        exclusions = []
         try:
             for obj_data in self.conf.objects:
                 logger.debug("Dumping: %s", obj_data)
                 self.action_single(obj_data, action='snapshot')
                 if 'exclude' in obj_data:
-                    excludes += (os.path.join(obj_data['path'], ex)
-                                 for ex in obj_data['exclude'])
+                    exclusions += (os.path.join(obj_data['path'], ex).lstrip('/')
+                                   for ex in obj_data['exclude'])
 
             logger.debug("Dumping shotgun log "
                          "and archiving dump directory: %s",
@@ -49,7 +49,7 @@ class Manager(object):
             self.action_single(self.conf.self_log_object, action='snapshot')
 
             utils.compress(self.conf.target, self.conf.compression_level,
-                           excludes)
+                           exclude=exclusions)
 
             with open(self.conf.lastdump, "w") as fo:
                 fo.write("{0}.tar.xz".format(self.conf.target))
