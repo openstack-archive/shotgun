@@ -49,6 +49,8 @@ class TestUtils(base.BaseTestCase):
         target = '/path/target'
         level = '-3'
 
+        mexecute.return_value = (None, None, None)
+
         utils.compress(target, level)
 
         compress_call = mexecute.call_args_list[0]
@@ -58,7 +60,7 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(compress_env['XZ_OPT'], level)
         self.assertEqual(
             compress_call[0][0],
-            'tar chzvf /path/target.tar.gz -C /path target')
+            'tar chzf /path/target.tar.gz -C /path target')
 
         self.assertEqual(rm_call[0][0], 'rm -r /path/target')
 
@@ -69,6 +71,8 @@ class TestUtils(base.BaseTestCase):
 
         exclusions = ['/path/to/exclude1', '/path/to/exclude2']
 
+        mexecute.return_value = (None, None, None)
+
         utils.compress(target, level, exclude=exclusions)
 
         compress_call = mexecute.call_args_list[0]
@@ -77,8 +81,8 @@ class TestUtils(base.BaseTestCase):
         self.assertEqual(compress_env['XZ_OPT'], level)
         self.assertEqual(
             compress_call[0][0],
-            'tar chzvf /path/target.tar.gz -C /path target '
-            '--exclude /path/to/exclude1 --exclude /path/to/exclude2')
+            'tar chzf /path/target.tar.gz -C /path target '
+            '--exclude=/path/to/exclude1 --exclude=/path/to/exclude2')
 
 
 class TestCCStringIO(base.BaseTestCase):
