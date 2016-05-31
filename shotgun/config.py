@@ -119,3 +119,8 @@ class Config(object):
             "type": "file",
             "path": settings.LOG_FILE
         }
+
+    @property
+    def sudo(self):
+        """Use sudo to execute commands or not."""
+        return self.data.get("sudo", settings.DEFAULT_SUDO)

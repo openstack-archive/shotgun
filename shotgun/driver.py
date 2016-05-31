@@ -72,6 +72,7 @@ class Driver(object):
         hostname = data_host.get("hostname")
         address = data_host.get("address")
         self.ssh_key = data_host.get("ssh-key")
+        self.ssh_user = data_host.get("ssh-user", "root")
 
         # `dest_host` is a IP address or a hostname which is used for network
         # connection. IP address is preferable for network connection.
@@ -87,6 +88,7 @@ class Driver(object):
 
         self.conf = conf
         self.timeout = data.get("timeout", self.conf.timeout)
+        self.sudo = data.get("sudo", self.conf.sudo)
 
     def snapshot(self):
         raise NotImplementedError
@@ -104,7 +106,8 @@ class Driver(object):
         try:
             if self.dest_host:
                 with fabric.api.settings(
-                    host_string=self.dest_host,   # destination host
+                    user=self.ssh_user,            # user to log in as
+                    host_string=self.dest_host,    # destination host
                     key_filename=self.ssh_key,     # a path to ssh key
                     timeout=2,                     # connection timeout
                     command_timeout=self.timeout,  # command execution timeout
@@ -116,7 +119,11 @@ class Driver(object):
                         "Running remote command: host: %s command: %s",
                         self.host, command)
                     try:
-                        output = fabric.api.run(command, stdout=raw_stdout)
+                        if self.sudo:
+                            output = fabric.api.sudo(command,
+                                                     stdout=raw_stdout)
+                        else:
+                            output = fabric.api.run(command, stdout=raw_stdout)
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
                     # NOTE(prmtl): because of pty=True (default) and
@@ -150,7 +157,8 @@ class Driver(object):
                 os.makedirs(target_path)
             if self.dest_host:
                 with fabric.api.settings(
-                    host_string=self.dest_host,  # destination host
+                    user=self.ssh_user,           # user to log in as
+                    host_string=self.dest_host,   # destination host
                     key_filename=self.ssh_key,    # a path to ssh key
                     timeout=2,                    # connection timeout
                     warn_only=True,               # don't exit on error
@@ -159,7 +167,8 @@ class Driver(object):
                     logger.debug("Getting remote file: %s %s",
                                  path, target_path)
                     try:
-                        return fabric.api.get(path, target_path)
+                        return fabric.api.get(path, target_path,
+                                              use_sudo=self.sudo)
                     except SystemExit:
                         logger.error("Fabric aborted this iteration")
             else:
