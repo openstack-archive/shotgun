@@ -27,8 +27,7 @@ class TestManager(base.BaseTestCase):
 
     @mock.patch('shotgun.manager.Driver.getDriver')
     @mock.patch('shotgun.manager.utils.compress')
-    @mock.patch('shutil.rmtree')
-    def test_snapshot(self, mrmtree, mcompress, mget):
+    def test_snapshot(self, mcompress, mget):
         data = {
             "type": "file",
             "path": "/remote_dir/remote_file",
@@ -45,12 +44,10 @@ class TestManager(base.BaseTestCase):
         manager.snapshot()
         calls = [mock.call(data, conf), mock.call(conf.self_log_object, conf)]
         mget.assert_has_calls(calls, any_order=True)
-        mrmtree.assert_called_once_with('/target', onerror=mock.ANY)
 
     @mock.patch('shotgun.manager.Driver.getDriver')
-    @mock.patch('shutil.rmtree')
     @mock.patch('shotgun.manager.utils.compress')
-    def test_snapshot_network_error(self, mcompress, mrmtree, mget):
+    def test_snapshot_network_error(self, mcompress, mget):
         objs = [
             {"type": "file",
              "path": "/remote_file1",
@@ -92,7 +89,6 @@ class TestManager(base.BaseTestCase):
                                mock.call(processed_obj, conf),
                                mock.call(offline_obj, conf),
                                mock.call(offline_obj, conf)], any_order=True)
-        mrmtree.assert_called_once_with('/tmp', onerror=mock.ANY)
 
     @mock.patch('shotgun.manager.Manager.action_single')
     def test_report(self, mock_action):
@@ -134,8 +130,7 @@ class TestManager(base.BaseTestCase):
         self.assertFalse(mock_driver_instance.report.called)
 
     @mock.patch('shotgun.manager.Manager.action_single')
-    @mock.patch('shutil.rmtree')
-    def test_snapshot_rm_without_disk_space(self, mrmtree, mock_action):
+    def test_snapshot_rm_without_disk_space(self, mock_action):
         mock_action.side_effect = IOError(28, "Not enough space")
 
         data = {
@@ -154,11 +149,9 @@ class TestManager(base.BaseTestCase):
 
         self.assertRaises(IOError, manager.snapshot)
         calls = [mock.call('/target', onerror=mock.ANY) for _ in range(2)]
-        mrmtree.assert_has_calls(calls)
 
     @mock.patch('shotgun.manager.Manager.action_single')
-    @mock.patch('shutil.rmtree')
-    def test_snapshot_doesnt_clean_on_generic_ioerror(self, mrmtree,
+    def test_snapshot_doesnt_clean_on_generic_ioerror(self,
                                                       mock_action):
         mock_action.side_effect = IOError(1, "Generic error")
 
@@ -177,4 +170,3 @@ class TestManager(base.BaseTestCase):
         manager = Manager(conf)
 
         self.assertRaises(IOError, manager.snapshot)
-        mrmtree.assert_called_once_with('/target', onerror=mock.ANY)
