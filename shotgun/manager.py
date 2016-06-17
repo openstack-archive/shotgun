@@ -83,5 +83,6 @@ class Manager(object):
             msg = "Clearing target failed. function: {}, path: {}, excinfo: {}"
             logger.error(msg.format(function, path, excinfo))
 
-        shutil.rmtree(os.path.dirname(self.conf.target),
-                      onerror=on_rmtree_error)
+        if os.path.exists(self.conf.target):
+            shutil.rmtree(os.path.dirname(self.conf.target),
+                        onerror=on_rmtree_error)
