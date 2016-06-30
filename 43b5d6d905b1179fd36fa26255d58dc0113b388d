@@ -1,0 +1,11 @@
+Code-Review+1: Maksim Malchuk <mmalchuk@mirantis.com>
+Code-Review+1: Bulat Gaifullin <bgaifullin@mirantis.com>
+Code-Review+1: Ilya Kutukov <ikutukov@mirantis.com>
+Code-Review+2: Igor Kalnitsky <ikalnitsky@mirantis.com>
+Workflow+1: Igor Kalnitsky <ikalnitsky@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 30 Jun 2016 10:06:33 +0000
+Reviewed-on: https://review.openstack.org/330943
+Project: openstack/shotgun
+Branch: refs/heads/master
