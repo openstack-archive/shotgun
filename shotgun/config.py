@@ -75,7 +75,7 @@ class Config(object):
         return obj['host'].get('address') or obj['host'].get('hostname')
 
     def on_network_error(self, obj):
-        """Lets the object to have another attempt for being proccessed."""
+        """Lets the object to have another attempt for being processed."""
         host = self.get_network_address(obj)
         logger.debug("Remote host %s is unreachable. "
                      "Processing of its objects postponed.", host)
