@@ -46,6 +46,9 @@ class CommandOut(object):
             str(self.output) == str(other.output)
         )
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class Driver(object):
 
