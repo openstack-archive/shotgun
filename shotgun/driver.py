@@ -132,10 +132,10 @@ class Driver(object):
                 out.stdout = out.stdout.decode('utf-8')
                 out.output = out.stdout
         except fabric.exceptions.NetworkError as e:
-            logger.error("NetworkError occured: %s", str(e))
+            logger.error("NetworkError occurred: %s", str(e))
             raise
         except Exception as e:
-            logger.error("Unexpected error occured: %s", str(e))
+            logger.error("Unexpected error occurred: %s", str(e))
             out.stdout = raw_stdout.getvalue()
         return out
 
@@ -172,10 +172,10 @@ class Driver(object):
                     "Symlinking to local file: {}".format(symlink_command))
                 return utils.execute(symlink_command)
         except fabric.exceptions.NetworkError as e:
-            logger.error("NetworkError occured: %s", str(e))
+            logger.error("NetworkError occurred: %s", str(e))
             raise
         except Exception as e:
-            logger.error("Unexpected error occured: %s", str(e))
+            logger.error("Unexpected error occurred: %s", str(e))
 
 
 class File(Driver):
@@ -333,7 +333,7 @@ class DockerCommand(Command):
 
 class Offline(Driver):
 
-    default_report_message = 'Network error occured. Host might be offline.'
+    default_report_message = 'Network error occurred. Host might be offline.'
 
     def __init__(self, data, conf):
         super(Offline, self).__init__(data, conf)
