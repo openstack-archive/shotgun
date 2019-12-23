@@ -1,0 +1,8 @@
+Code-Review+2: Andreas Jaeger <jaegerandi@gmail.com>
+Workflow+1: Andreas Jaeger <jaegerandi@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 23 Dec 2019 20:10:51 +0000
+Reviewed-on: https://review.opendev.org/700243
+Project: openstack/shotgun
+Branch: refs/heads/master
